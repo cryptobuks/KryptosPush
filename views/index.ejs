@@ -1,0 +1,31 @@
+<html>
+<head>
+
+</head>
+<body>
+	<br/><br/>
+	<h1>Dynamic API</h1>
+	<table border="1" cellpadding="1" cellspacing="1">
+		<thead>
+			<tr>
+				<th>API Name</th>
+				<th>Request Type (GET|POST|PUT|DELETE)</th>
+				<th>URL</th>
+				<th>Samples</th>
+			</tr>
+			<% for (var i=0;i<api.length;i++) {%>
+				<tr>
+					<td><%=api[i].apiName%></td>
+					<td><%=api[i].type%></td>
+					<td><%=api[i].urlPattern%></td>
+					<td>
+						<code>
+							<%=api[i].sampleRequest%>
+						</code>
+					</td>
+				</tr>
+			<%}%>
+		</thead>
+	</table>
+</body>
+</html>
