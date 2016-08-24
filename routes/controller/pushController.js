@@ -31,6 +31,9 @@ exports.addAppleCert = function(req, res, next) {
                             "error": "Keys already registered."
                         });
                     } else {
+                            //var cert=fs.readFileSync("cert.pem");
+                            //var key=fs.readFileSync("key.pem");
+
                         var data = {
                             'tenant': tenant,
                             'tenantID': tenantID,
@@ -332,6 +335,7 @@ exports.sendPushToChannel = function(req, res, next) {
     if (req.body && req.body.tenant && req.body.channel && req.body.title && req.body.body) {
         sendRes=res;
         var tenant = req.body.tenant;
+        var tenantID = req.body.tenantID;
         var channel = req.body.channel;
         var title = req.body.title;
         var body = req.body.body;
@@ -476,10 +480,27 @@ exports.sendPushToChannel = function(req, res, next) {
                             if (deviceIOS.length > 0) {
                                 var options = {};
                                 options["production"] = true;
-                                var certBuffer=fs.readFileSync("cert.pem");
-                            var keyBuffer=fs.readFileSync("key.pem");
-                            options["cert"] = certBuffer;
-                            options["key"] = keyBuffer;
+                                dbUtil.getConnection(function(db) {
+                                var tableName = "T_PUSH_APPLEKEYS";
+                                db.collection(tableName).find({
+                                "tenantID": tenantID
+                                }).toArray(function(err, result) {
+                                console.log(result);
+                                if (result.length == 0) {
+                                res.json({
+                                        "error": "tenant not found"
+                                });
+                                } else {
+                                    options["cert"] = result[0].cert;
+                                    options["key"] = result[0].key;
+                                }
+                            });
+                            });
+
+                                //var certBuffer=fs.readFileSync("cert.pem");
+                                //var keyBuffer=fs.readFileSync("key.pem");
+                                    //options["cert"] = certBuffer;
+                                    //options["key"] = keyBuffer;
 
                                 var iOSTokens = [];
                                 var apnConnection = new apn.Connection(options)
@@ -600,9 +621,24 @@ exports.sendPushToDevice = function(req, res, next) {
                             //console.log(deviceIOS);
                             var options = {};
                             options["production"] = true;
-                            
-                            options["cert"] = "cert.pem";
-                            options["key"] = "key.pem";
+                            dbUtil.getConnection(function(db) {
+                                var tableName = "T_PUSH_APPLEKEYS";
+                                db.collection(tableName).find({
+                                "tenantID": tenantID
+                                }).toArray(function(err, result) {
+                                console.log(result);
+                                if (result.length == 0) {
+                                res.json({
+                                        "error": "tenant not found"
+                                });
+                                } else {
+                                    options["cert"] = result[0].cert;
+                                    options["key"] = result[0].key;
+                                }
+                            });
+                            });
+                            //options["cert"] = "cert.pem";
+                            //options["key"] = "key.pem";
                             
 
 
@@ -611,15 +647,16 @@ exports.sendPushToDevice = function(req, res, next) {
 
 
                             var note = new apn.Notification();
-                            //note.badge = 3;
-                            note.title = title;
-                            note.sound = "ping.aiff";
-                            //note.alert = "You have a new message You have a new message You have a new message You have a new message You have a new message You have a new message You have a new message";
-                            note.alert = {
-                                'title': title,
-                                'body': body
-                            };
-                            //note.payload = {'title': 'Push title1','messageFrom': 'Caroline'};
+                                note.title = title;
+                                note.sound = "ping.aiff";
+                                note.alert = {
+                                    'title': title,
+                                    'body': body,
+                                    'openApplet': appletName,
+                                    'click-action': 'View Notification',
+                                    'launch-image': picture
+                                };
+                                note['content-available'] = 1;
 
                             apnConnection.pushNotification(note, myDevice);
                             var options = {
