@@ -3,7 +3,6 @@ var apn = require('apn');
 var q = require('q');
 var fs = require("fs");
 
-var bcrypt = require('bcrypt');
 var dbUtil = require("../../config/dbUtil");
 var ObjectId = require('mongodb').ObjectID;
 

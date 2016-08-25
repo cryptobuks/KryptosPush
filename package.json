@@ -19,11 +19,10 @@
     "mongodb": "^2.0.43",
     "morgan": "~1.5.3",
     "q": "^1.4.1",
-     "bcrypt" : "^0.8.5",
-     "util" : "~0.10.3",
-     "querystring" : "~0.2.0",
-     "node-gcm" : "~0.14.4",
-     "apn":"~1.7.8"
+    "util" : "~0.10.3",
+    "querystring" : "~0.2.0",
+    "node-gcm" : "~0.14.4",
+    "apn":"~1.7.8"
   },
   "description": "External Dynamic Data Save",
   "main": "bin/www",
