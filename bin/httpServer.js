@@ -9,4 +9,4 @@ var options = {
 https.createServer(options, function (req, res) {
   res.writeHead(200);
   res.end("Welcome to Kryptos Push Node Server.");
-}).listen(8080);
+}).listen(8484);
