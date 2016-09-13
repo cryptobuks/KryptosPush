@@ -44,18 +44,40 @@ router.route("/push/getAppleCert")
     .post(pushPluginController.getAppleCert);
 router.route("/push/adddevice")
     .post(pushPluginController.adddevice);
+
+router.route("/push/adddeviceToChannel")
+    .post(pushPluginController.adddeviceToChannel);
+
 router.route("/push/updateDevice")
     .post(pushPluginController.updateDevice);
-router.route("/push/getDevices")
-    .post(pushPluginController.getDevices);
+router.route("/push/getAllDevices")
+    .post(pushPluginController.getAllDevices);
+
+router.route("/push/getChannelDevices")
+    .post(pushPluginController.getChannelDevices);
+
 router.route("/push/sendPushToChannel")
     .post(pushPluginController.sendPushToChannel);
+    
 router.route("/push/sendPushToDevice")
     .post(pushPluginController.sendPushToDevice);
 router.route("/push/getPushLogs")
     .post(pushPluginController.getPushLogs);
-router.route("/push/deleteDevice")
-    .post(pushPluginController.deleteDevice);
+
+router.route("/push/getTenantFeed")
+    .post(pushPluginController.getTenantFeed);
+
+router.route("/push/getTenantChannelFeed")
+    .post(pushPluginController.getTenantChannelFeed);
+    
+router.route("/push/deleteDeviceFromChannel")
+    .post(pushPluginController.deleteDeviceFromChannel);
+
+router.route("/push/createChannel")
+    .post(pushPluginController.createChannel);
+
+router.route("/push/getChannels")
+    .post(pushPluginController.getChannels);
 
 
 module.exports = router;
