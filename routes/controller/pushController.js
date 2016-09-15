@@ -7,19 +7,16 @@ var dbUtil = require("../../config/dbUtil");
 var ObjectId = require('mongodb').ObjectID;
 
 
-var apiKey = "AIzaSyB1BQYXqruGydpTRRtpMfVivrBlEzwR850";
-//var apiKey = "AIzaSyCWE7t1KGMF8A8nmUBsri2QZD8ecxt8k-A";
-
-exports.addAppleCert = function(req, res, next) {
+exports.addTenantPushKeys = function(req, res, next) {
     if (req.body && req.body.tenant && req.body.cert && req.body.key) {
 
         var tenant = req.body.tenant;
         var cert = req.body.cert;
         var key = req.body.key;
-
+        var gcmKey= req.body.gcmKey; 
         try {
             dbUtil.getConnection(function(db) {
-                var tableName = "T_PUSH_APPLEKEYS";
+                var tableName = "T_PUSH_TENANTKEYS";
                 db.collection(tableName).find({
                     "tenant": tenant
                 }).toArray(function(err, result) {
@@ -35,7 +32,8 @@ exports.addAppleCert = function(req, res, next) {
                         var data = {
                             'tenant': tenant,
                             'cert': cert,
-                            'key': key
+                            'key': key,
+                            'gcmKey':gcmKey
                         };
                         db.collection(tableName).insertOne(data, function(err, result3) {
                             res.json({
@@ -56,16 +54,16 @@ exports.addAppleCert = function(req, res, next) {
 }
 
 
-exports.updateAppleCert = function(req, res, next) {
+exports.updateTenantPushKeys = function(req, res, next) {
     if (req.body && req.body.tenant && req.body.cert && req.body.key) {
 
         var tenant = req.body.tenant;
         var cert = req.body.cert;
         var key = req.body.key;
-
+        var gcmKey = req.body.gcmKey;
         try {
             dbUtil.getConnection(function(db) {
-                var tableName = "T_PUSH_APPLEKEYS";
+                var tableName = "T_PUSH_TENANTKEYS";
                 db.collection(tableName).find({
                     "tenant": tenant
                 }).toArray(function(err, result) {
@@ -78,7 +76,8 @@ exports.updateAppleCert = function(req, res, next) {
                         var data = {
                             'tenant': tenant,
                             'cert': cert,
-                            'key': key
+                            'key': key,
+                            'gcmKey':gcmKey
                         };
                         db.collection(tableName).updateOne({
                             "tenant": tenant
@@ -103,16 +102,16 @@ exports.updateAppleCert = function(req, res, next) {
 }
 
 
-exports.getAppleCert = function(req, res, next) {
+exports.getTenantPushKeys = function(req, res, next) {
     if (req.body && req.body.tenant && req.body.cert && req.body.key) {
 
         var tenant = req.body.tenant;
         var cert = req.body.cert;
         var key = req.body.key;
-
+        var gcmKey = req.body.gcmKey
         try {
             dbUtil.getConnection(function(db) {
-                var tableName = "T_PUSH_APPLEKEYS";
+                var tableName = "T_PUSH_TENANTKEYS";
                 db.collection(tableName).find({
                     "tenant": tenant
                 }).toArray(function(err, result) {
@@ -378,32 +377,48 @@ var AndroidGrouplogs = [];
 var sendGroupAndroidPushes = function(AllDevices, message, pushData, tenant) {
     //console.log(typeof groupCount);
     //console.log(AllDevices[groupCount]);
-
-    var service = new gcm.Sender(apiKey);
-    service.send(message, {
-        registrationTokens: AllDevices[groupCount]
-    }, function(err, response) {
-        if (err) {
-            groupCount = groupCount + 1;
-            if (groupCount < AllDevices.length) {
-                sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
-            }
-        } else {
-
-            AndroidGrouplogs.push(response);
-
-            groupCount = groupCount + 1;
-            if (groupCount < AllDevices.length) {
-                sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
+    dbUtil.getConnection(function(db) {
+        var tableName = "T_PUSH_TENANTKEYS";
+        db.collection(tableName).find({
+            "tenant": tenant
+        }).toArray(function(err, result) {
+            console.log(result);
+            if (result.length == 0) {
+                res.json({
+                    "error": "tenant not found"
+                });
             } else {
-                pushData.AndroidDevicesLogs = AndroidGrouplogs;
-                pushLogEntry(tenant, pushData);
-                sendRes.json({
-                    "success": "Notification sent"
+                var apiKey = result[0].gcmKey
+                var service = new gcm.Sender(apiKey);
+                service.send(message, {
+                    registrationTokens: AllDevices[groupCount]
+                }, function(err, response) {
+                    if (err) {
+                        groupCount = groupCount + 1;
+                        if (groupCount < AllDevices.length) {
+                            sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
+                        }
+                    } else {
+
+                        AndroidGrouplogs.push(response);
+
+                        groupCount = groupCount + 1;
+                        if (groupCount < AllDevices.length) {
+                            sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
+                        } else {
+                            pushData.AndroidDevicesLogs = AndroidGrouplogs;
+                            pushLogEntry(tenant, pushData);
+                            sendRes.json({
+                                "success": "Notification sent"
+                            });
+                        }
+                    }
                 });
             }
-        }
+        })
     });
+
+
 }
 
 
@@ -441,7 +456,7 @@ exports.sendPushToChannel = function(req, res, next) {
                     'channel': channel,
                     'channelId': channelId,
                     'body': body,
-                    'picture':(picture == undefined?'':picture),
+                    'picture': (picture == undefined ? '' : picture),
                     'likes': '',
                     'cmnts': '',
 
@@ -545,42 +560,60 @@ exports.sendPushToChannel = function(req, res, next) {
                                                         sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
                                                         //res.json(sendSuccess);
                                                     } else {
+                                                        dbUtil.getConnection(function(db) {
+                                                            var tableName = "T_PUSH_TENANTKEYS";
+                                                            db.collection(tableName).find({
+                                                                "tenant": tenant
+                                                            }).toArray(function(err, result) {
+                                                                console.log(result);
+                                                                if (result.length == 0) {
+                                                                    res.json({
+                                                                        "error": "tenant not found"
+                                                                    });
+                                                                } else {
+                                                                    var apiKey = result[0].gcmKey
+                                                                    var service = new gcm.Sender(apiKey);
+                                                                    var message = new gcm.Message();
+                                                                    message.addData('title', title);
+                                                                    message.addData('message', body);
+                                                                    message.addData('image', 'www/icon.png');
+                                                                    if (picture == "" || picture == null || picture == undefined) {} else {
+                                                                        message.addData('style', 'picture');
+                                                                        message.addData('picture', picture);
+                                                                        message.addData('summaryText', body);
 
-                                                        var service = new gcm.Sender(apiKey);
-                                                        var message = new gcm.Message();
-                                                        message.addData('title', title);
-                                                        message.addData('message', body);
-                                                        message.addData('image', 'www/icon.png');
-                                                        if (picture == "" || picture == null || picture == undefined) {} else {
-                                                            message.addData('style', 'picture');
-                                                            message.addData('picture', picture);
-                                                            message.addData('summaryText', body);
+                                                                    }
+                                                                    message.addData('notId', parseInt(Math.random() * 10000));
+                                                                    message.addData('content-available', 1);
 
-                                                        }
-                                                        message.addData('notId', parseInt(Math.random() * 10000));
-                                                        message.addData('content-available', 1);
+                                                                    if (appletName == null || appletName == undefined) {} else {
+                                                                        message.addData("openApplet", appletName);
+                                                                    }
+                                                                    /*message.addData('actions', [
+                                                                        { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
+                                                                        { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
+                                                                    ]);*/
 
-                                                        if (appletName == null || appletName == undefined) {} else {
-                                                            message.addData("openApplet", appletName);
-                                                        }
-                                                        /*message.addData('actions', [
-                                                            { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
-                                                            { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
-                                                        ]);*/
+                                                                    console.log(apiKey);
 
-                                                        service.send(message, {
-                                                            registrationTokens: AndroidPushDevices
-                                                        }, function(err, response) {
-                                                            if (err) {
-                                                                console.error(err);
-                                                            } else { //console.log(response); 
-                                                                pushData.AndroidDevicesLogs = response;
-                                                                res.json({
-                                                                    "success": "Notification sent"
-                                                                });
-                                                                pushLogEntry(tenant, pushData);
-                                                            }
+                                                                    service.send(message, {
+                                                                        registrationTokens: AndroidPushDevices
+                                                                    }, function(err, response) {
+                                                                        if (err) {
+                                                                            console.error(err + " " + response);
+                                                                        } else { //console.log(response); 
+                                                                            pushData.AndroidDevicesLogs = response;
+                                                                            res.json({
+                                                                                "success": "Notification sent"
+                                                                            });
+                                                                            pushLogEntry(tenant, pushData);
+                                                                        }
+                                                                    });
+                                                                }
+                                                            });
                                                         });
+
+
                                                     }
 
 
@@ -588,7 +621,7 @@ exports.sendPushToChannel = function(req, res, next) {
                                                         var options = {};
                                                         options["production"] = true;
                                                         dbUtil.getConnection(function(db) {
-                                                            var tableName = "T_PUSH_APPLEKEYS";
+                                                            var tableName = "T_PUSH_TENANTKEYS";
                                                             db.collection(tableName).find({
                                                                 "tenant": tenant
                                                             }).toArray(function(err, result) {
@@ -661,6 +694,8 @@ exports.sendPushToChannel = function(req, res, next) {
 
 
                                                 }
+                                            } else {
+
                                             }
                                         });
                                     });
@@ -745,7 +780,7 @@ exports.sendPushToDevice = function(req, res, next) {
                             var options = {};
                             options["production"] = true;
                             dbUtil.getConnection(function(db) {
-                                var tableName = "T_PUSH_APPLEKEYS";
+                                var tableName = "T_PUSH_TENANTKEYS";
                                 db.collection(tableName).find({
                                     "tenant": tenant
                                 }).toArray(function(err, result) {

@@ -36,12 +36,16 @@ var canProcessMetaDataPost = function (req, res, next) {
 
 var pushPluginController = require("../routes/controller/pushController");
 
-router.route("/push/addAppleCert")
-    .post(pushPluginController.addAppleCert);
-router.route("/push/updateAppleCert")
-    .post(pushPluginController.updateAppleCert);
-router.route("/push/getAppleCert")
-    .post(pushPluginController.getAppleCert);
+
+router.route("/push/addTenantPushKeys")
+    .post(pushPluginController.addTenantPushKeys);
+
+router.route("/push/updateTenantPushKeys")
+    .post(pushPluginController.updateTenantPushKeys);
+
+router.route("/push/getTenantPushKeys")
+    .post(pushPluginController.getTenantPushKeys);
+    
 router.route("/push/adddevice")
     .post(pushPluginController.adddevice);
 

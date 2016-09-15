@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * Module dependencies.
  */
@@ -5,26 +7,19 @@
 var app = require('../app');
 var debug = require('debug')('ak:server');
 var http = require('http');
-var https = require('https');
-var fs = require('fs');
+
 /**
  * Get port from environment and store in Express.
  */
 
-var port = normalizePort(process.env.PORT || '443');
-app.set('port', 443);
+var port = normalizePort(process.env.PORT || '8484');
+app.set('port', port);
 
 /**
  * Create HTTP server.
  */
 
-//var server = http.createServer(app);
-var options = {
-  key: fs.readFileSync('push.kryptosmobile.com/server.key'),
-  cert: fs.readFileSync('push.kryptosmobile.com/server.crt'),
-  ca : [fs.readFileSync('push.kryptosmobile.com/gdig2.crt'), fs.readFileSync('push.kryptosmobile.com/gd_bundle-g2-g1.crt')]
-  };
-var server = https.createServer(options, app);
+var server = http.createServer(app);
 
 /**
  * Listen on provided port, on all network interfaces.
@@ -50,6 +45,7 @@ function normalizePort(val) {
     // port number
     return port;
   }
+
   return false;
 }
 
@@ -86,20 +82,12 @@ function onError(error) {
  */
 
 function onListening() {
-
-  
-
   var addr = server.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
   debug('Listening on ' + bind);
 }
-
-https.createServer(options, function (req, res) {
-  res.writeHead(200);
-  //res.end("Welcome to Kryptos Push Node Server.");
-}).listen(8484);
 
 /*var https = require('https');
 var fs = require('fs');
