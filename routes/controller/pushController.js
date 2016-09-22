@@ -13,7 +13,7 @@ exports.addTenantPushKeys = function(req, res, next) {
         var tenant = req.body.tenant;
         var cert = req.body.cert;
         var key = req.body.key;
-        var gcmKey= req.body.gcmKey; 
+        var gcmKey = req.body.gcmKey;
         try {
             dbUtil.getConnection(function(db) {
                 var tableName = "T_PUSH_TENANTKEYS";
@@ -26,14 +26,18 @@ exports.addTenantPushKeys = function(req, res, next) {
                             "error": "Keys already registered."
                         });
                     } else {
-                        //var cert=fs.readFileSync("cert.pem");
-                        //var key=fs.readFileSync("key.pem");
+                        var cert = fs.readFileSync("cert.pem", {
+                            'encoding': 'utf8'
+                        });
+                        var key = fs.readFileSync("key.pem");
+
+                        console.log(cert);
 
                         var data = {
                             'tenant': tenant,
                             'cert': cert,
                             'key': key,
-                            'gcmKey':gcmKey
+                            'gcmKey': gcmKey
                         };
                         db.collection(tableName).insertOne(data, function(err, result3) {
                             res.json({
@@ -77,7 +81,7 @@ exports.updateTenantPushKeys = function(req, res, next) {
                             'tenant': tenant,
                             'cert': cert,
                             'key': key,
-                            'gcmKey':gcmKey
+                            'gcmKey': gcmKey
                         };
                         db.collection(tableName).updateOne({
                             "tenant": tenant
@@ -440,6 +444,7 @@ exports.sendPushToChannel = function(req, res, next) {
         var userImage = req.body.userImage;
         var postedBy = req.body.postedBy;
         var picture = req.body.picture;
+        var postId = Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1) + Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1) + "" + Math.floor((Math.random() * 10) + 1);
         var deviceIOS = [];
         var deviceAndroid = [];
 
@@ -459,7 +464,8 @@ exports.sendPushToChannel = function(req, res, next) {
                     'picture': (picture == undefined ? '' : picture),
                     'likes': '',
                     'cmnts': '',
-
+                    'views': '',
+                    'postId': postId,
                     'date': dateTimeStamp.toString()
                 };
 
@@ -1016,6 +1022,965 @@ exports.getChannels = function(req, res, next) {
                 } else {
                     res.json({
                         "error": "No channel found."
+                    });
+                }
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+exports.likePost = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.channelId && req.body.postId && req.body.useremail && req.body.username) {
+        var tenant = req.body.tenant;
+        var channelId = req.body.channelId;
+        var postId = req.body.postId;
+        var useremail = req.body.useremail;
+        var username = req.body.username;
+        var userimg = req.body.userimg;
+
+        dbUtil.getConnection(function(db) {
+            var tableName = "T_" + tenant + "_FEED";
+            db.collection(tableName).find({
+                "postId": postId
+            }).toArray(function(err, result) {
+                console.log(result);
+                var data = result[0];
+                if (data.likes == '') {
+                    data.likes = 1;
+                } else {
+                    data.likes = data.likes + 1;
+                }
+                db.collection(tableName).updateOne({
+                    "postId": postId
+                }, {
+                    $set: data
+                }, function(err, result3) {
+                    var tableName = "T_" + tenant + "_" + channelId + "_FEED";
+                    db.collection(tableName).updateOne({
+                        "postId": postId
+                    }, {
+                        $set: data
+                    }, function(err, result3) {
+                        //res.json({'success':'post liked'})
+                        var tableName = "T_" + tenant + "_" + channelId + "_POSTLIKES"
+
+                        db.collection(tableName).find({
+                            "postId": postId
+                        }).toArray(function(err, result) {
+                            if (result.length == 0) {
+                                var user = [];
+                                user.push({
+                                    'un': username,
+                                    'email': useremail,
+                                    'img': userimg
+                                });
+                                var likesData = {
+                                    "postId": postId,
+                                    "users": user
+                                }
+                                db.collection(tableName).insertOne(likesData, function(err, result3) {
+                                    var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
+                                    db.collection(tableName).find({
+                                        "email": useremail
+                                    }).toArray(function(err, result) {
+                                        console.log(result);
+                                        if (result.length > 0) {
+                                            var data = result[0];
+                                            data.posts.push(postId);
+                                            db.collection(tableName).updateOne({
+                                                "email": useremail
+                                            }, {
+                                                $set: data
+                                            }, function(err, result3) {
+                                                res.json({
+                                                    "success": "post liked"
+                                                });
+                                            });
+                                        } else {
+                                            var post = [];
+                                            post.push(postId)
+                                            var data = {
+                                                'tenant': tenant,
+                                                'email': useremail,
+                                                'posts': post
+                                            };
+                                            db.collection(tableName).insertOne(data, function(err, result3) {
+                                                res.json({
+                                                    "success": "post liked"
+                                                });
+                                            });
+                                        }
+                                    });
+                                    /*res.json({
+                                        "success": "post liked"
+                                    });*/
+                                });
+                            } else {
+                                var likeData = result[0];
+                                likeData.users.push({
+                                    'un': username,
+                                    'email': useremail,
+                                    'img': userimg
+                                });
+                                db.collection(tableName).updateOne({
+                                    "postId": postId
+                                }, {
+                                    $set: likeData
+                                }, function(err, result3) {
+                                    var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
+                                    db.collection(tableName).find({
+                                        "email": useremail
+                                    }).toArray(function(err, result) {
+                                        console.log(result);
+                                        if (result.length > 0) {
+                                            var data = result[0];
+                                            data.posts.push(postId);
+                                            db.collection(tableName).updateOne({
+                                                "email": useremail
+                                            }, {
+                                                $set: data
+                                            }, function(err, result3) {
+                                                res.json({
+                                                    "success": "post liked"
+                                                });
+                                            });
+                                        } else {
+                                            var post = [];
+                                            post.push(postId)
+                                            var data = {
+                                                'tenant': tenant,
+                                                'email': useremail,
+                                                'posts': post
+                                            };
+                                            db.collection(tableName).insertOne(data, function(err, result3) {
+                                                res.json({
+                                                    "success": "post liked"
+                                                });
+                                            });
+                                        }
+                                    });
+                                });
+                            }
+                        });
+
+                    });
+                });
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+
+exports.deleteLikePost = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.channelId && req.body.postId && req.body.useremail && req.body.username) {
+        var tenant = req.body.tenant;
+        var channelId = req.body.channelId;
+        var postId = req.body.postId;
+        var useremail = req.body.useremail;
+        var username = req.body.username;
+        var userimg = req.body.userimg;
+
+        dbUtil.getConnection(function(db) {
+            var tableName = "T_" + tenant + "_FEED";
+            db.collection(tableName).find({
+                "postId": postId
+            }).toArray(function(err, result) {
+                console.log(result);
+                var data = result[0];
+                if (data.likes == '') {} else {
+                    data.likes = data.likes - 1;
+                }
+                db.collection(tableName).updateOne({
+                    "postId": postId
+                }, {
+                    $set: data
+                }, function(err, result3) {
+                    var tableName = "T_" + tenant + "_" + channelId + "_FEED";
+                    db.collection(tableName).updateOne({
+                        "postId": postId
+                    }, {
+                        $set: data
+                    }, function(err, result3) {
+                        //res.json({'success':'post liked'})
+                        var tableName = "T_" + tenant + "_" + channelId + "_POSTLIKES"
+
+                        db.collection(tableName).find({
+                            "postId": postId
+                        }).toArray(function(err, result) {
+                            var likeData = result[0];
+                            for (var i = 0; i < likeData.users.length; i++) {
+                                if (useremail == likeData.users[i].email) {
+                                    likeData.users.splice(i, 1);
+                                    break;
+                                }
+                            }
+                            db.collection(tableName).updateOne({
+                                "postId": postId
+                            }, {
+                                $set: likeData
+                            }, function(err, result3) {
+                                /*res.json({
+                                    "success": "post unliked"
+                                });*/
+                                var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
+                                db.collection(tableName).find({
+                                    "email": useremail
+                                }).toArray(function(err, result) {
+                                    console.log(result);
+                                    if (result.length > 0) {
+                                        var data = result[0];
+                                        for (var i = 0; i < data.posts.length; i++) {
+                                            if (postId == data.posts[i]) {
+                                                data.posts.splice(i, 1);
+
+                                                break;
+                                            }
+                                        }
+                                        db.collection(tableName).updateOne({
+                                            "email": useremail
+                                        }, {
+                                            $set: data
+                                        }, function(err, result3) {
+                                            res.json({
+                                                "success": "post unliked"
+                                            });
+                                        });
+                                    }
+                                });
+                            });
+                        });
+
+                    });
+                });
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+
+
+exports.getPostLikes = function(req, res, next) {
+    if (req.body && req.body.tenant) {
+        var tenant = req.body.tenant;
+        var channelId = req.body.channelId;
+        var postId = req.body.postId;
+
+        var tableName = "T_" + tenant + "_" + channelId + "_POSTLIKES"
+        dbUtil.getConnection(function(db) {
+            db.collection(tableName).find({
+                'postId': postId
+            }).sort({
+                _id: -1
+            }).toArray(function(err, result) {
+                console.log(result);
+                if (result.length > 0) {
+                    res.json(result);
+                } else {
+                    res.json({
+                        "error": "No channel found."
+                    });
+                }
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+exports.userLikedPost = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.email && req.body.postId) {
+        var tenant = req.body.tenant;
+        var email = req.body.email;
+        var postId = req.body.postId;
+        try {
+            dbUtil.getConnection(function(db) {
+                var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
+                db.collection(tableName).find({
+                    "email": email
+                }).toArray(function(err, result) {
+                    console.log(result);
+                    if (result.length > 0) {
+                        var data = result[0];
+                        data.posts.push(postId);
+                        db.collection(tableName).updateOne({
+                            "email": email
+                        }, {
+                            $set: data
+                        }, function(err, result3) {
+                            res.json({
+                                "success": "post added for user"
+                            });
+                        });
+                    } else {
+                        var post = [];
+                        post.push(postId)
+                        var data = {
+                            'tenant': tenant,
+                            'email': email,
+                            'posts': post
+                        };
+                        db.collection(tableName).insertOne(data, function(err, result3) {
+                            res.json({
+                                "success": "post added for user"
+                            });
+                        });
+                    }
+                });
+            });
+        } catch (e) {
+            console.log(e)
+        }
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing tenant, channel, channelId"
+        });
+    }
+}
+
+exports.userUnLikePost = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.email && req.body.postId) {
+        var tenant = req.body.tenant;
+        var email = req.body.email;
+        var postId = req.body.postId;
+        try {
+            dbUtil.getConnection(function(db) {
+                var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
+                db.collection(tableName).find({
+                    "email": email
+                }).toArray(function(err, result) {
+                    console.log(result);
+                    if (result.length > 0) {
+                        var data = result[0];
+                        for (var i = 0; i < data.posts.length; i++) {
+                            if (postId == data.posts[i])
+                                data.posts.splice(i, 1);
+                            break;
+                        }
+                        db.collection(tableName).updateOne({
+                            "email": email
+                        }, {
+                            $set: data
+                        }, function(err, result3) {
+                            res.json({
+                                "success": "post unliked for user"
+                            });
+                        });
+                    }
+                });
+            });
+        } catch (e) {
+            console.log(e)
+        }
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing tenant, channel, channelId"
+        });
+    }
+}
+
+exports.getUserLikedPosts = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.email) {
+        var tenant = req.body.tenant;
+        var email = req.body.email;
+
+        var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
+        dbUtil.getConnection(function(db) {
+            db.collection(tableName).find({
+                'email': email
+            }).toArray(function(err, result) {
+                console.log(result);
+                if (result.length > 0) {
+                    res.json(result);
+                } else {
+                    res.json({
+                        "error": "User not found"
+                    });
+                }
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+
+exports.postViews = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.channelId && req.body.postId) {
+        var tenant = req.body.tenant;
+        var postId = req.body.postId;
+        var channelId = req.body.channelId;
+        var tableName = "T_" + tenant + "_FEED";
+        dbUtil.getConnection(function(db) {
+            db.collection(tableName).find({
+                'postId': postId
+            }).toArray(function(err, result) {
+                console.log(result);
+                if (result.length > 0) {
+                    var postData = result[0];
+                    if (postData.views == '') {
+                        postData.views = 1;
+                    } else {
+                        postData.views = postData.views + 1;
+                    }
+                    console.log(postData);
+                    db.collection(tableName).updateOne({
+                        "postId": postId
+                    }, {
+                        $set: postData
+                    }, function(err, result3) {
+                        res.json({
+                            "success": "post viewed"
+                        });
+                    });
+                } else {
+                    res.json({
+                        "error": "User not found"
+                    });
+                }
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+
+exports.postComment = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.channelId && req.body.postId && req.body.comment && req.body.useremail && req.body.userimg && req.body.username) {
+        var tenant = req.body.tenant;
+        var postId = req.body.postId;
+        var channelId = req.body.channelId;
+        var comment = req.body.comment;
+        var useremail = req.body.useremail;
+        var userimage = req.body.userimg;
+        var username = req.body.username;
+        var date = new Date();
+        var deviceIOS = [];
+        var deviceAndroid = [];
+        var appletName="Home4";
+        dbUtil.getConnection(function(db) {
+                var tableName = "T_" + tenant + "_FEED";
+                db.collection(tableName).find({
+                    "postId": postId
+                }).toArray(function(err, result) {
+                        //console.log(result);
+                        var data = result[0];
+                        if (data.cmnts == '') {
+                            data.cmnts = 1;
+                        } else {
+                            data.cmnts = data.cmnts + 1;
+                        }
+                        db.collection(tableName).updateOne({
+                                "postId": postId
+                            }, {
+                                $set: data
+                            }, function(err, result3) {
+                                var tableName = "T_" + tenant + "_" + channelId + "_FEED";
+                                db.collection(tableName).updateOne({
+                                        "postId": postId
+                                    }, {
+                                        $set: data
+                                    }, function(err, result3) {
+                                        //res.json({'success':'post liked'})
+                                        var tableName = "T_" + tenant + "_" + channelId + "_POSTCOMMENTS"
+
+                                        db.collection(tableName).find({
+                                            "postId": postId
+                                        }).toArray(function(err, result) {
+                                                if (result.length == 0) {
+                                                    var user = [];
+                                                    user.push({
+                                                        'un': username,
+                                                        'email': useremail,
+                                                        'img': userimage,
+                                                        'cmnt': comment,
+                                                        'date': date.toString()
+                                                    });
+                                                    var cmntData = {
+                                                        "postId": postId,
+                                                        "users": user
+                                                    }
+                                                    db.collection(tableName).insertOne(cmntData, function(err, result3) {
+                                                            //res.json({'success':'comment posted'});
+                                                            dbUtil.getConnection(function(db) {
+                                                                    var tableName = "T_" + tenant + "_" + channelId + "_DEVICES";
+                                                                    console.log(tableName);
+                                                                    db.collection(tableName).find({}, {
+                                                                        _id: 0
+                                                                    }).toArray(function(err, result) {
+                                                                        //console.log("result"+result);
+                                                                            if (result.length > 0) {
+                                                                                console.log(result);
+
+                                                                                for (var i = 0; i < result.length; i++) {
+                                                                                    if (result[i].type == "iOS") {
+                                                                                        deviceIOS.push(result[i].ID);
+                                                                                    } else {
+                                                                                        deviceAndroid.push(result[i].ID);
+                                                                                    }
+                                                                                }
+                                                                                /*checking redundant ID from diff channels*/
+                                                                                var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
+                                                                                    return index == self.indexOf(elem);
+                                                                                });
+                                                                                var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
+                                                                                    return index == self.indexOf(elem);
+                                                                                });
+
+                                                                                console.log("iOS devices" + iOSPushDevices);
+                                                                                console.log("Android devices" + AndroidPushDevices);
+
+                                                                                /* Send pushes to Android device */
+
+                                                                                /* checking if devices are more than 1000 */
+                                                                                if (false) {}
+                                                                                /*if (AndroidPushDevices.length > 1000) {
+                                                                                    var deviceGroup = [];
+                                                                                    var AllDevices = [];
+                                                                                    var devicesCount = 0;
+                                                                                    for (var i = 0; i < AndroidPushDevices.length; i++) {
+
+                                                                                        if (devicesCount == 1000) {
+                                                                                            AllDevices.push(deviceGroup);
+                                                                                            deviceGroup = [];
+                                                                                            devicesCount = 0;
+                                                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                                                            devicesCount = devicesCount + 1;
+                                                                                        } else {
+                                                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                                                            devicesCount = devicesCount + 1;
+                                                                                        }
+                                                                                    }
+                                                                                    AllDevices.push(deviceGroup);
+                                                                                    //console.log(AllDevices[1]);
+                                                                                    var message = new gcm.Message();
+                                                                                    message.addData('title', title);
+                                                                                    message.addData('message', body);
+                                                                                    message.addData('image', 'www/icon.png');
+                                                                                    if (picture == "" || picture == null || picture == undefined) {} else {
+                                                                                        message.addData('style', 'picture');
+                                                                                        message.addData('picture', picture);
+                                                                                        message.addData('summaryText', body);
+
+                                                                                    }
+                                                                                    message.addData('notId', parseInt(Math.random() * 10000));
+                                                                                    message.addData('content-available', 1);
+
+                                                                                    if (appletName == null || appletName == undefined) {} else {
+                                                                                        message.addData("openApplet", appletName);
+                                                                                    }
+
+                                                                                    groupCount = 0;
+                                                                                    sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
+                                                                                    //res.json(sendSuccess);*/
+                                                                                else {
+                                                                                dbUtil.getConnection(function(db) {
+                                                                                    var tableName = "T_PUSH_TENANTKEYS";
+                                                                                    db.collection(tableName).find({
+                                                                                        "tenant": tenant
+                                                                                    }).toArray(function(err, result) {
+                                                                                        console.log(result);
+                                                                                        if (result.length == 0) {
+                                                                                            res.json({
+                                                                                                "error": "tenant not found"
+                                                                                            });
+                                                                                        } else {
+                                                                                            var apiKey = result[0].gcmKey
+                                                                                            var service = new gcm.Sender(apiKey);
+                                                                                            var message = new gcm.Message();
+                                                                                            message.addData('title', username + " posted a comment.");
+                                                                                            message.addData('message', comment);
+                                                                                            message.addData('image', 'www/icon.png');
+                                                                                            message.addData('notId', parseInt(Math.random() * 10000));
+                                                                                            message.addData('content-available', 1);
+
+                                                                                            if (appletName == null || appletName == undefined) {} else {
+                                                                                                message.addData("openApplet", appletName);
+                                                                                            }
+                                                                                            /*message.addData('actions', [
+                                                                                                { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
+                                                                                                { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
+                                                                                            ]);*/
+
+                                                                                            console.log(apiKey);
+
+                                                                                            service.send(message, {
+                                                                                                registrationTokens: AndroidPushDevices
+                                                                                            }, function(err, response) {
+                                                                                                if (err) {
+                                                                                                    console.error(err + " " + response);
+                                                                                                } else { //console.log(response); 
+
+                                                                                                    res.json({
+                                                                                                        "success": "Comment/Notification sent"
+                                                                                                    });
+
+                                                                                                }
+                                                                                            });
+                                                                                        }
+                                                                                    });
+                                                                                });
+
+
+                                                                            }
+
+
+                                                                            if (iOSPushDevices.length > 0) {
+                                                                                var options = {};
+                                                                                options["production"] = true;
+                                                                                dbUtil.getConnection(function(db) {
+                                                                                    var tableName = "T_PUSH_TENANTKEYS";
+                                                                                    db.collection(tableName).find({
+                                                                                        "tenant": tenant
+                                                                                    }).toArray(function(err, result) {
+                                                                                        console.log(result);
+                                                                                        if (result.length == 0) {
+                                                                                            res.json({
+                                                                                                "error": "tenant not found"
+                                                                                            });
+                                                                                        } else {
+                                                                                            options["cert"] = result[0].cert;
+                                                                                            options["key"] = result[0].key;
+                                                                                        }
+                                                                                    });
+                                                                                });
+
+                                                                                //var certBuffer=fs.readFileSync("cert.pem");
+                                                                                //var keyBuffer=fs.readFileSync("key.pem");
+                                                                                //options["cert"] = certBuffer;
+                                                                                //options["key"] = keyBuffer;
+
+                                                                                var iOSTokens = [];
+                                                                                var apnConnection = new apn.Connection(options)
+
+                                                                                for (var i = 0; i < iOSPushDevices.length; i++) {
+                                                                                    var myDevice = new apn.Device(iOSPushDevices[i]);
+                                                                                    iOSTokens.push(myDevice);
+                                                                                }
+                                                                                //var myDevice = new apn.Device(id);
+
+                                                                                var note = new apn.Notification();
+                                                                                note.title = title;
+                                                                                note.sound = "ping.aiff";
+                                                                                note.alert = {
+                                                                                    'title': title,
+                                                                                    'body': body,
+                                                                                    'openApplet': appletName,
+                                                                                    'click-action': 'View Notification',
+                                                                                    'launch-image': picture
+                                                                                };
+                                                                                note['content-available'] = 1;
+                                                                                //note.payload = {'title': 'Push title1','messageFrom': 'Caroline'};
+
+                                                                                apnConnection.pushNotification(note, iOSTokens);
+                                                                                var iOSPushes = [];
+
+                                                                                /*apnConnection.on("transmitted", function(notification, device) {
+                                                                                    iOSPushes.push(device.token.toString("hex"));
+                                                                                });
+
+                                                                                apnConnection.on("completed", function(notification, device) {
+                                                                                    console.log(iOSPushes);
+                                                                                    pushData.appleDevicesLogs = iOSPushes;
+                                                                                    pushLogEntry(tenant, pushData);
+                                                                                });*/
+
+                                                                                var options = {
+                                                                                    "batchFeedback": true,
+                                                                                    "interval": 300
+                                                                                };
+
+                                                                                var feedback = new apn.Feedback(options);
+                                                                                feedback.on("feedback", function(devices) {
+                                                                                    devices.forEach(function(item) {
+                                                                                        console.log(item.device + "   " + item.time);
+                                                                                    });
+                                                                                });
+                                                                            }
+
+
+
+
+                                                                        }
+                                                                    });
+                                                            });
+                                                        /*res.json({
+                                                            "success": "post liked"
+                                                        });*/
+                                                    });
+                                            } else {
+                                                var cmntData = result[0];
+                                                cmntData.users.push({
+                                                    'un': username,
+                                                    'email': useremail,
+                                                    'img': userimage,
+                                                    'cmnt': comment,
+                                                    'date': date.toString()
+                                                });
+                                                db.collection(tableName).updateOne({
+                                                    "postId": postId
+                                                }, {
+                                                    $set: cmntData
+                                                }, function(err, result3) {
+                                                    /*res.json({
+                                                        'success': 'comment posted'
+                                                    });*/
+                                                    dbUtil.getConnection(function(db) {
+                                                                    var tableName = "T_" + tenant + "_" + channelId + "_DEVICES";
+                                                                    console.log(tableName);
+                                                                    db.collection(tableName).find({}, {
+                                                                        _id: 0
+                                                                    }).toArray(function(err, result) {
+                                                                        //console.log("result"+result);
+                                                                            if (result.length > 0) {
+                                                                                console.log(result);
+
+                                                                                for (var i = 0; i < result.length; i++) {
+                                                                                    if (result[i].type == "iOS") {
+                                                                                        deviceIOS.push(result[i].ID);
+                                                                                    } else {
+                                                                                        deviceAndroid.push(result[i].ID);
+                                                                                    }
+                                                                                }
+                                                                                /*checking redundant ID from diff channels*/
+                                                                                var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
+                                                                                    return index == self.indexOf(elem);
+                                                                                });
+                                                                                var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
+                                                                                    return index == self.indexOf(elem);
+                                                                                });
+
+                                                                                console.log("iOS devices" + iOSPushDevices);
+                                                                                console.log("Android devices" + AndroidPushDevices);
+
+                                                                                /* Send pushes to Android device */
+
+                                                                                /* checking if devices are more than 1000 */
+                                                                                if (false) {}
+                                                                                /*if (AndroidPushDevices.length > 1000) {
+                                                                                    var deviceGroup = [];
+                                                                                    var AllDevices = [];
+                                                                                    var devicesCount = 0;
+                                                                                    for (var i = 0; i < AndroidPushDevices.length; i++) {
+
+                                                                                        if (devicesCount == 1000) {
+                                                                                            AllDevices.push(deviceGroup);
+                                                                                            deviceGroup = [];
+                                                                                            devicesCount = 0;
+                                                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                                                            devicesCount = devicesCount + 1;
+                                                                                        } else {
+                                                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                                                            devicesCount = devicesCount + 1;
+                                                                                        }
+                                                                                    }
+                                                                                    AllDevices.push(deviceGroup);
+                                                                                    //console.log(AllDevices[1]);
+                                                                                    var message = new gcm.Message();
+                                                                                    message.addData('title', title);
+                                                                                    message.addData('message', body);
+                                                                                    message.addData('image', 'www/icon.png');
+                                                                                    if (picture == "" || picture == null || picture == undefined) {} else {
+                                                                                        message.addData('style', 'picture');
+                                                                                        message.addData('picture', picture);
+                                                                                        message.addData('summaryText', body);
+
+                                                                                    }
+                                                                                    message.addData('notId', parseInt(Math.random() * 10000));
+                                                                                    message.addData('content-available', 1);
+
+                                                                                    if (appletName == null || appletName == undefined) {} else {
+                                                                                        message.addData("openApplet", appletName);
+                                                                                    }
+
+                                                                                    groupCount = 0;
+                                                                                    sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
+                                                                                    //res.json(sendSuccess);*/
+                                                                                else {
+                                                                                dbUtil.getConnection(function(db) {
+                                                                                    var tableName = "T_PUSH_TENANTKEYS";
+                                                                                    db.collection(tableName).find({
+                                                                                        "tenant": tenant
+                                                                                    }).toArray(function(err, result) {
+                                                                                        console.log(result);
+                                                                                        if (result.length == 0) {
+                                                                                            res.json({
+                                                                                                "error": "tenant not found"
+                                                                                            });
+                                                                                        } else {
+                                                                                            var apiKey = result[0].gcmKey
+                                                                                            var service = new gcm.Sender(apiKey);
+                                                                                            var message = new gcm.Message();
+                                                                                            message.addData('title', username + " posted a comment.");
+                                                                                            message.addData('message', comment);
+                                                                                            message.addData('image', 'www/icon.png');
+                                                                                            message.addData('notId', parseInt(Math.random() * 10000));
+                                                                                            message.addData('content-available', 1);
+
+                                                                                            if (appletName == null || appletName == undefined) {} else {
+                                                                                                message.addData("openApplet", appletName);
+                                                                                            }
+                                                                                            /*message.addData('actions', [
+                                                                                                { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
+                                                                                                { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
+                                                                                            ]);*/
+
+                                                                                            console.log(apiKey);
+
+                                                                                            service.send(message, {
+                                                                                                registrationTokens: AndroidPushDevices
+                                                                                            }, function(err, response) {
+                                                                                                if (err) {
+                                                                                                    console.error(err + " " + response);
+                                                                                                } else { //console.log(response); 
+
+                                                                                                    res.json({
+                                                                                                        "success": "Comment/Notification sent"
+                                                                                                    });
+
+                                                                                                }
+                                                                                            });
+                                                                                        }
+                                                                                    });
+                                                                                });
+
+
+                                                                            }
+
+
+                                                                            if (iOSPushDevices.length > 0) {
+                                                                                var options = {};
+                                                                                options["production"] = true;
+                                                                                dbUtil.getConnection(function(db) {
+                                                                                    var tableName = "T_PUSH_TENANTKEYS";
+                                                                                    db.collection(tableName).find({
+                                                                                        "tenant": tenant
+                                                                                    }).toArray(function(err, result) {
+                                                                                        console.log(result);
+                                                                                        if (result.length == 0) {
+                                                                                            res.json({
+                                                                                                "error": "tenant not found"
+                                                                                            });
+                                                                                        } else {
+                                                                                            options["cert"] = result[0].cert;
+                                                                                            options["key"] = result[0].key;
+                                                                                        }
+                                                                                    });
+                                                                                });
+
+                                                                                //var certBuffer=fs.readFileSync("cert.pem");
+                                                                                //var keyBuffer=fs.readFileSync("key.pem");
+                                                                                //options["cert"] = certBuffer;
+                                                                                //options["key"] = keyBuffer;
+
+                                                                                var iOSTokens = [];
+                                                                                var apnConnection = new apn.Connection(options)
+
+                                                                                for (var i = 0; i < iOSPushDevices.length; i++) {
+                                                                                    var myDevice = new apn.Device(iOSPushDevices[i]);
+                                                                                    iOSTokens.push(myDevice);
+                                                                                }
+                                                                                //var myDevice = new apn.Device(id);
+
+                                                                                var note = new apn.Notification();
+                                                                                note.title = title;
+                                                                                note.sound = "ping.aiff";
+                                                                                note.alert = {
+                                                                                    'title': title,
+                                                                                    'body': body,
+                                                                                    'openApplet': appletName,
+                                                                                    'click-action': 'View Notification',
+                                                                                    'launch-image': picture
+                                                                                };
+                                                                                note['content-available'] = 1;
+                                                                                //note.payload = {'title': 'Push title1','messageFrom': 'Caroline'};
+
+                                                                                apnConnection.pushNotification(note, iOSTokens);
+                                                                                var iOSPushes = [];
+
+                                                                                /*apnConnection.on("transmitted", function(notification, device) {
+                                                                                    iOSPushes.push(device.token.toString("hex"));
+                                                                                });
+
+                                                                                apnConnection.on("completed", function(notification, device) {
+                                                                                    console.log(iOSPushes);
+                                                                                    pushData.appleDevicesLogs = iOSPushes;
+                                                                                    pushLogEntry(tenant, pushData);
+                                                                                });*/
+
+                                                                                var options = {
+                                                                                    "batchFeedback": true,
+                                                                                    "interval": 300
+                                                                                };
+
+                                                                                var feedback = new apn.Feedback(options);
+                                                                                feedback.on("feedback", function(devices) {
+                                                                                    devices.forEach(function(item) {
+                                                                                        console.log(item.device + "   " + item.time);
+                                                                                    });
+                                                                                });
+                                                                            }
+
+
+
+
+                                                                        }
+                                                                    });
+                                                            });
+
+
+                                                    
+                                                });
+                                            }
+                                        });
+
+                                });
+                        });
+                });
+        });
+} else {
+    res.status(401).json({
+        "Error": "Parameters missing"
+    });
+}
+}
+
+
+exports.getPostComments = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.postId && req.body.channelId) {
+        var tenant = req.body.tenant;
+        var channelId = req.body.channelId;
+        var postId = req.body.postId;
+
+        var tableName = "T_" + tenant + "_" + channelId + "_POSTCOMMENTS";
+        dbUtil.getConnection(function(db) {
+            db.collection(tableName).find({
+                'postId': postId
+            }).toArray(function(err, result) {
+                console.log(result);
+                if (result.length > 0) {
+                    res.json(result);
+                } else {
+                    res.json({
+                        "error": "comment not found"
                     });
                 }
             });

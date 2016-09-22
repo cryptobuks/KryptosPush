@@ -65,6 +65,7 @@ router.route("/push/sendPushToChannel")
     
 router.route("/push/sendPushToDevice")
     .post(pushPluginController.sendPushToDevice);
+
 router.route("/push/getPushLogs")
     .post(pushPluginController.getPushLogs);
 
@@ -82,6 +83,35 @@ router.route("/push/createChannel")
 
 router.route("/push/getChannels")
     .post(pushPluginController.getChannels);
+
+router.route("/push/likePost")
+    .post(pushPluginController.likePost);
+
+router.route("/push/deleteLikePost")
+    .post(pushPluginController.deleteLikePost);
+    
+router.route("/push/getPostLikes")
+    .post(pushPluginController.getPostLikes);
+
+router.route("/push/userLikedPost")
+    .post(pushPluginController.userLikedPost);
+
+router.route("/push/userUnLikePost")
+    .post(pushPluginController.userUnLikePost);
+
+router.route("/push/getUserLikedPosts")
+    .post(pushPluginController.getUserLikedPosts);
+
+router.route("/push/postViews")
+    .post(pushPluginController.postViews);
+
+router.route("/push/postComment")
+    .post(pushPluginController.postComment);
+    
+router.route("/push/getPostComments")
+    .post(pushPluginController.getPostComments);
+    
+    
 
 
 module.exports = router;
