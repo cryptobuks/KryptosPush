@@ -1048,22 +1048,22 @@ exports.likePost = function(req, res, next) {
                 "postId": postId
             }).toArray(function(err, result) {
                 console.log(result);
-                var data = result[0];
-                if (data.likes == '') {
-                    data.likes = 1;
+                var likes = result[0].likes;
+                if (likes == '') {
+                    likes = 1;
                 } else {
-                    data.likes = data.likes + 1;
+                    likes = likes + 1;
                 }
                 db.collection(tableName).updateOne({
                     "postId": postId
                 }, {
-                    $set: data
+                    $set: {"likes":likes}
                 }, function(err, result3) {
                     var tableName = "T_" + tenant + "_" + channelId + "_FEED";
                     db.collection(tableName).updateOne({
                         "postId": postId
                     }, {
-                        $set: data
+                        $set: {"likes":likes}
                     }, function(err, result3) {
                         //res.json({'success':'post liked'})
                         var tableName = "T_" + tenant + "_" + channelId + "_POSTLIKES"
@@ -1194,20 +1194,20 @@ exports.deleteLikePost = function(req, res, next) {
                 "postId": postId
             }).toArray(function(err, result) {
                 console.log(result);
-                var data = result[0];
-                if (data.likes == '') {} else {
-                    data.likes = data.likes - 1;
+                var likes = result[0].likes;
+                if (likes == '') {} else {
+                    likes = likes - 1;
                 }
                 db.collection(tableName).updateOne({
                     "postId": postId
                 }, {
-                    $set: data
+                    $set: {"likes":likes}
                 }, function(err, result3) {
                     var tableName = "T_" + tenant + "_" + channelId + "_FEED";
                     db.collection(tableName).updateOne({
                         "postId": postId
                     }, {
-                        $set: data
+                        $set: {"likes":likes}
                     }, function(err, result3) {
                         //res.json({'success':'post liked'})
                         var tableName = "T_" + tenant + "_" + channelId + "_POSTLIKES"
@@ -1430,11 +1430,10 @@ exports.postViews = function(req, res, next) {
             db.collection(tableName).find({
                 'postId': postId
             }).toArray(function(err, result) {
-                console.log(result);
+                //console.log(result);
                 if (result.length > 0) {
                     var views = result[0].views;
-                    console.log(result[0]);
-                    console.log(views);
+
                     if (views == '') {
                         views = 1;
                     } else {
@@ -1447,8 +1446,8 @@ exports.postViews = function(req, res, next) {
                         //$set: postData
                         $set: {"views":views}
                     }, function(err, result3) {
-                        console.log("err"+err);
-                        console.log("result3"+result3);
+                        //console.log("err"+err);
+                        //console.log("result3"+result3);
                         res.json({
                             "success": "post viewed"
                         });
@@ -1487,22 +1486,22 @@ exports.postComment = function(req, res, next) {
                     "postId": postId
                 }).toArray(function(err, result) {
                         //console.log(result);
-                        var data = result[0];
-                        if (data.cmnts == '') {
-                            data.cmnts = 1;
+                        var cmnts = result[0].cmnts;
+                        if (cmnts == '') {
+                            cmnts = 1;
                         } else {
-                            data.cmnts = data.cmnts + 1;
+                            cmnts = cmnts + 1;
                         }
                         db.collection(tableName).updateOne({
                                 "postId": postId
                             }, {
-                                $set: data
+                                $set: {"cmnts":cmnts}
                             }, function(err, result3) {
                                 var tableName = "T_" + tenant + "_" + channelId + "_FEED";
                                 db.collection(tableName).updateOne({
                                         "postId": postId
                                     }, {
-                                        $set: data
+                                        $set: {"cmnts":cmnts}
                                     }, function(err, result3) {
                                         //res.json({'success':'post liked'})
                                         var tableName = "T_" + tenant + "_" + channelId + "_POSTCOMMENTS"
