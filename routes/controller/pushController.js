@@ -1742,7 +1742,7 @@ exports.postComment = function(req, res, next) {
                                                 db.collection(tableName).updateOne({
                                                     "postId": postId
                                                 }, {
-                                                    $set: cmntData
+                                                    $set: {"users":cmntData.users}
                                                 }, function(err, result3) {
                                                     /*res.json({
                                                         'success': 'comment posted'
