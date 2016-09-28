@@ -1432,18 +1432,23 @@ exports.postViews = function(req, res, next) {
             }).toArray(function(err, result) {
                 console.log(result);
                 if (result.length > 0) {
-                    var postData = result[0];
-                    if (postData.views == '') {
-                        postData.views = 1;
+                    var views = result[0].views;
+                    console.log(result[0]);
+                    console.log(views);
+                    if (views == '') {
+                        views = 1;
                     } else {
-                        postData.views = postData.views + 1;
+                        views = views + 1;
                     }
-                    console.log(postData);
+                    console.log(views);
                     db.collection(tableName).updateOne({
                         "postId": postId
                     }, {
-                        $set: postData
+                        //$set: postData
+                        $set: {"views":views}
                     }, function(err, result3) {
+                        console.log("err"+err);
+                        console.log("result3"+result3);
                         res.json({
                             "success": "post viewed"
                         });
