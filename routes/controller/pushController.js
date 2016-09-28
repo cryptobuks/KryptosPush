@@ -1089,12 +1089,12 @@ exports.likePost = function(req, res, next) {
                                     }).toArray(function(err, result) {
                                         console.log(result);
                                         if (result.length > 0) {
-                                            var data = result[0];
-                                            data.posts.push(postId);
+                                            var posts = result[0].posts;
+                                            posts.push(postId);
                                             db.collection(tableName).updateOne({
                                                 "email": useremail
                                             }, {
-                                                $set: data
+                                                $set: {"posts":posts}
                                             }, function(err, result3) {
                                                 res.json({
                                                     "success": "post liked"
@@ -1120,8 +1120,8 @@ exports.likePost = function(req, res, next) {
                                     });*/
                                 });
                             } else {
-                                var likeData = result[0];
-                                likeData.users.push({
+                                var users = result[0].users;
+                                users.push({
                                     'un': username,
                                     'email': useremail,
                                     'img': userimg
@@ -1129,7 +1129,7 @@ exports.likePost = function(req, res, next) {
                                 db.collection(tableName).updateOne({
                                     "postId": postId
                                 }, {
-                                    $set: likeData
+                                    $set: {"users":users}
                                 }, function(err, result3) {
                                     var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
                                     db.collection(tableName).find({
@@ -1137,12 +1137,12 @@ exports.likePost = function(req, res, next) {
                                     }).toArray(function(err, result) {
                                         console.log(result);
                                         if (result.length > 0) {
-                                            var data = result[0];
-                                            data.posts.push(postId);
+                                            var posts = result[0].posts;
+                                            posts.push(postId);
                                             db.collection(tableName).updateOne({
                                                 "email": useremail
                                             }, {
-                                                $set: data
+                                                $set: {"posts":posts}
                                             }, function(err, result3) {
                                                 res.json({
                                                     "success": "post liked"
@@ -1225,7 +1225,7 @@ exports.deleteLikePost = function(req, res, next) {
                             db.collection(tableName).updateOne({
                                 "postId": postId
                             }, {
-                                $set: likeData
+                                $set: {"users":likeData.users}
                             }, function(err, result3) {
                                 /*res.json({
                                     "success": "post unliked"
@@ -1247,7 +1247,7 @@ exports.deleteLikePost = function(req, res, next) {
                                         db.collection(tableName).updateOne({
                                             "email": useremail
                                         }, {
-                                            $set: data
+                                            $set: {"posts":data.posts}
                                         }, function(err, result3) {
                                             res.json({
                                                 "success": "post unliked"
