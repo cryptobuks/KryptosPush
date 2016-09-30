@@ -35,7 +35,7 @@ var canProcessMetaDataPost = function (req, res, next) {
 }
 
 var pushPluginController = require("../routes/controller/pushController");
-
+var generalPushController = require("../routes/controller/generalPushController");
 
 router.route("/push/addTenantPushKeys")
     .post(pushPluginController.addTenantPushKeys);
@@ -112,6 +112,7 @@ router.route("/push/getPostComments")
     .post(pushPluginController.getPostComments);
     
     
-
+router.route("/push/sendPush")
+    .post(generalPushController.sendPush);
 
 module.exports = router;

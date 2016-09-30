@@ -1,3 +1,4 @@
+"use strict";
 var gcm = require('node-gcm');
 var apn = require('apn');
 var q = require('q');
@@ -8,12 +9,13 @@ var ObjectId = require('mongodb').ObjectID;
 
 
 exports.addTenantPushKeys = function(req, res, next) {
-    if (req.body && req.body.tenant && req.body.cert && req.body.key) {
+    if (req.body && req.body.tenant && req.body.cert && req.body.key && req.body.bundleId && req.body.gcmKey) {
 
         var tenant = req.body.tenant;
         var cert = req.body.cert;
         var key = req.body.key;
         var gcmKey = req.body.gcmKey;
+        var bundleId = req.body.bundleId;
         try {
             dbUtil.getConnection(function(db) {
                 var tableName = "T_PUSH_TENANTKEYS";
@@ -29,15 +31,16 @@ exports.addTenantPushKeys = function(req, res, next) {
                         var cert = fs.readFileSync("cert.pem", {
                             'encoding': 'utf8'
                         });
-                        var key = fs.readFileSync("key.pem");
+                        //var key = fs.readFileSync("key.pem");
 
-                        console.log(cert);
+                        //console.log(cert);
 
                         var data = {
                             'tenant': tenant,
                             'cert': cert,
                             'key': key,
-                            'gcmKey': gcmKey
+                            'gcmKey': gcmKey,
+                            'bundleId': bundleId
                         };
                         db.collection(tableName).insertOne(data, function(err, result3) {
                             res.json({
@@ -52,19 +55,20 @@ exports.addTenantPushKeys = function(req, res, next) {
         }
     } else {
         res.status(401).json({
-            "Error": "Parameters missing tenant, cert or key"
+            "Error": "Parameters missing tenant, cert, key, bundleId or gcmKey"
         });
     }
 }
 
 
 exports.updateTenantPushKeys = function(req, res, next) {
-    if (req.body && req.body.tenant && req.body.cert && req.body.key) {
+    if (req.body && req.body.tenant && req.body.cert && req.body.key && req.body.bundleId) {
 
         var tenant = req.body.tenant;
         var cert = req.body.cert;
         var key = req.body.key;
         var gcmKey = req.body.gcmKey;
+        var bundleId = req.body.bundleId;
         try {
             dbUtil.getConnection(function(db) {
                 var tableName = "T_PUSH_TENANTKEYS";
@@ -81,12 +85,19 @@ exports.updateTenantPushKeys = function(req, res, next) {
                             'tenant': tenant,
                             'cert': cert,
                             'key': key,
-                            'gcmKey': gcmKey
+                            'gcmKey': gcmKey,
+                            'bundleId': bundleId
                         };
                         db.collection(tableName).updateOne({
                             "tenant": tenant
                         }, {
-                            $set: data
+                            $set: {
+                                'tenant': tenant,
+                                'cert': cert,
+                                'key': key,
+                                'gcmKey': gcmKey,
+                                'bundleId': bundleId
+                            }
                         }, function(err, result3) {
                             res.json({
                                 "success": "keys updated successfully"
@@ -625,7 +636,18 @@ exports.sendPushToChannel = function(req, res, next) {
 
                                                     if (iOSPushDevices.length > 0) {
                                                         var options = {};
+                                                        options.token = {
+                                                            key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
+                                                            keyId: "G8VD8LMAWQ",
+                                                            teamId: "4CL3P3CWEQ",
+                                                        }
                                                         options["production"] = true;
+
+                                                        let apnProvider = new apn.Provider(options);
+                                                        let notification = new apn.Notification();
+                                                        notification.title = title;
+                                                        notification.body = body;
+                                                        var iOSBundleID;
                                                         dbUtil.getConnection(function(db) {
                                                             var tableName = "T_PUSH_TENANTKEYS";
                                                             db.collection(tableName).find({
@@ -637,68 +659,18 @@ exports.sendPushToChannel = function(req, res, next) {
                                                                         "error": "tenant not found"
                                                                     });
                                                                 } else {
-                                                                    options["cert"] = result[0].cert;
-                                                                    options["key"] = result[0].key;
+                                                                    notification.topic = result[0].bundleId;
+                                                                    apnProvider.send(notification, iOSPushDevices).then((result) => {
+                                                                    res.json({
+                                                                        "success": "Notification sent"
+                                                                        });
+                                                                    });
                                                                 }
                                                             });
                                                         });
-
-                                                        //var certBuffer=fs.readFileSync("cert.pem");
-                                                        //var keyBuffer=fs.readFileSync("key.pem");
-                                                        //options["cert"] = certBuffer;
-                                                        //options["key"] = keyBuffer;
-
-                                                        var iOSTokens = [];
-                                                        var apnConnection = new apn.Connection(options)
-
-                                                        for (var i = 0; i < iOSPushDevices.length; i++) {
-                                                            var myDevice = new apn.Device(iOSPushDevices[i]);
-                                                            iOSTokens.push(myDevice);
-                                                        }
-                                                        //var myDevice = new apn.Device(id);
-
-                                                        var note = new apn.Notification();
-                                                        note.title = title;
-                                                        note.sound = "ping.aiff";
-                                                        note.alert = {
-                                                            'title': title,
-                                                            'body': body,
-                                                            'openApplet': appletName,
-                                                            'click-action': 'View Notification',
-                                                            'launch-image': picture
-                                                        };
-                                                        note['content-available'] = 1;
-                                                        //note.payload = {'title': 'Push title1','messageFrom': 'Caroline'};
-
-                                                        apnConnection.pushNotification(note, iOSTokens);
-                                                        var iOSPushes = [];
-
-                                                        apnConnection.on("transmitted", function(notification, device) {
-                                                            iOSPushes.push(device.token.toString("hex"));
-                                                        });
-
-                                                        apnConnection.on("completed", function(notification, device) {
-                                                            console.log(iOSPushes);
-                                                            pushData.appleDevicesLogs = iOSPushes;
-                                                            pushLogEntry(tenant, pushData);
-                                                        });
-
-                                                        var options = {
-                                                            "batchFeedback": true,
-                                                            "interval": 300
-                                                        };
-
-                                                        var feedback = new apn.Feedback(options);
-                                                        feedback.on("feedback", function(devices) {
-                                                            devices.forEach(function(item) {
-                                                                console.log(item.device + "   " + item.time);
-                                                            });
-                                                        });
+                                                        console.log("Ios Push");
+                                                        
                                                     }
-
-
-
-
                                                 }
                                             } else {
 
@@ -1057,13 +1029,17 @@ exports.likePost = function(req, res, next) {
                 db.collection(tableName).updateOne({
                     "postId": postId
                 }, {
-                    $set: {"likes":likes}
+                    $set: {
+                        "likes": likes
+                    }
                 }, function(err, result3) {
                     var tableName = "T_" + tenant + "_" + channelId + "_FEED";
                     db.collection(tableName).updateOne({
                         "postId": postId
                     }, {
-                        $set: {"likes":likes}
+                        $set: {
+                            "likes": likes
+                        }
                     }, function(err, result3) {
                         //res.json({'success':'post liked'})
                         var tableName = "T_" + tenant + "_" + channelId + "_POSTLIKES"
@@ -1094,7 +1070,9 @@ exports.likePost = function(req, res, next) {
                                             db.collection(tableName).updateOne({
                                                 "email": useremail
                                             }, {
-                                                $set: {"posts":posts}
+                                                $set: {
+                                                    "posts": posts
+                                                }
                                             }, function(err, result3) {
                                                 res.json({
                                                     "success": "post liked"
@@ -1129,7 +1107,9 @@ exports.likePost = function(req, res, next) {
                                 db.collection(tableName).updateOne({
                                     "postId": postId
                                 }, {
-                                    $set: {"users":users}
+                                    $set: {
+                                        "users": users
+                                    }
                                 }, function(err, result3) {
                                     var tableName = "T_" + tenant + "_USERLIKEDPOSTS";
                                     db.collection(tableName).find({
@@ -1142,7 +1122,9 @@ exports.likePost = function(req, res, next) {
                                             db.collection(tableName).updateOne({
                                                 "email": useremail
                                             }, {
-                                                $set: {"posts":posts}
+                                                $set: {
+                                                    "posts": posts
+                                                }
                                             }, function(err, result3) {
                                                 res.json({
                                                     "success": "post liked"
@@ -1201,13 +1183,17 @@ exports.deleteLikePost = function(req, res, next) {
                 db.collection(tableName).updateOne({
                     "postId": postId
                 }, {
-                    $set: {"likes":likes}
+                    $set: {
+                        "likes": likes
+                    }
                 }, function(err, result3) {
                     var tableName = "T_" + tenant + "_" + channelId + "_FEED";
                     db.collection(tableName).updateOne({
                         "postId": postId
                     }, {
-                        $set: {"likes":likes}
+                        $set: {
+                            "likes": likes
+                        }
                     }, function(err, result3) {
                         //res.json({'success':'post liked'})
                         var tableName = "T_" + tenant + "_" + channelId + "_POSTLIKES"
@@ -1225,7 +1211,9 @@ exports.deleteLikePost = function(req, res, next) {
                             db.collection(tableName).updateOne({
                                 "postId": postId
                             }, {
-                                $set: {"users":likeData.users}
+                                $set: {
+                                    "users": likeData.users
+                                }
                             }, function(err, result3) {
                                 /*res.json({
                                     "success": "post unliked"
@@ -1247,7 +1235,9 @@ exports.deleteLikePost = function(req, res, next) {
                                         db.collection(tableName).updateOne({
                                             "email": useremail
                                         }, {
-                                            $set: {"posts":data.posts}
+                                            $set: {
+                                                "posts": data.posts
+                                            }
                                         }, function(err, result3) {
                                             res.json({
                                                 "success": "post unliked"
@@ -1444,7 +1434,9 @@ exports.postViews = function(req, res, next) {
                         "postId": postId
                     }, {
                         //$set: postData
-                        $set: {"views":views}
+                        $set: {
+                            "views": views
+                        }
                     }, function(err, result3) {
                         //console.log("err"+err);
                         //console.log("result3"+result3);
@@ -1479,492 +1471,421 @@ exports.postComment = function(req, res, next) {
         var date = new Date();
         var deviceIOS = [];
         var deviceAndroid = [];
-        var appletName="Home4";
+        var appletName = "Home4";
         dbUtil.getConnection(function(db) {
-                var tableName = "T_" + tenant + "_FEED";
-                db.collection(tableName).find({
+            var tableName = "T_" + tenant + "_FEED";
+            db.collection(tableName).find({
+                "postId": postId
+            }).toArray(function(err, result) {
+                //console.log(result);
+                var cmnts = result[0].cmnts;
+                if (cmnts == '') {
+                    cmnts = 1;
+                } else {
+                    cmnts = cmnts + 1;
+                }
+                db.collection(tableName).updateOne({
                     "postId": postId
-                }).toArray(function(err, result) {
-                        //console.log(result);
-                        var cmnts = result[0].cmnts;
-                        if (cmnts == '') {
-                            cmnts = 1;
-                        } else {
-                            cmnts = cmnts + 1;
+                }, {
+                    $set: {
+                        "cmnts": cmnts
+                    }
+                }, function(err, result3) {
+                    var tableName = "T_" + tenant + "_" + channelId + "_FEED";
+                    db.collection(tableName).updateOne({
+                        "postId": postId
+                    }, {
+                        $set: {
+                            "cmnts": cmnts
                         }
-                        db.collection(tableName).updateOne({
-                                "postId": postId
-                            }, {
-                                $set: {"cmnts":cmnts}
-                            }, function(err, result3) {
-                                var tableName = "T_" + tenant + "_" + channelId + "_FEED";
-                                db.collection(tableName).updateOne({
-                                        "postId": postId
-                                    }, {
-                                        $set: {"cmnts":cmnts}
-                                    }, function(err, result3) {
-                                        //res.json({'success':'post liked'})
-                                        var tableName = "T_" + tenant + "_" + channelId + "_POSTCOMMENTS"
+                    }, function(err, result3) {
+                        //res.json({'success':'post liked'})
+                        var tableName = "T_" + tenant + "_" + channelId + "_POSTCOMMENTS"
 
-                                        db.collection(tableName).find({
-                                            "postId": postId
+                        db.collection(tableName).find({
+                            "postId": postId
+                        }).toArray(function(err, result) {
+                            if (result.length == 0) {
+                                var user = [];
+                                user.push({
+                                    'un': username,
+                                    'email': useremail,
+                                    'img': userimage,
+                                    'cmnt': comment,
+                                    'date': date.toString()
+                                });
+                                var cmntData = {
+                                    "postId": postId,
+                                    "users": user
+                                }
+                                db.collection(tableName).insertOne(cmntData, function(err, result3) {
+                                    //res.json({'success':'comment posted'});
+                                    dbUtil.getConnection(function(db) {
+                                        var tableName = "T_" + tenant + "_" + channelId + "_DEVICES";
+                                        console.log(tableName);
+                                        db.collection(tableName).find({}, {
+                                            _id: 0
                                         }).toArray(function(err, result) {
-                                                if (result.length == 0) {
-                                                    var user = [];
-                                                    user.push({
-                                                        'un': username,
-                                                        'email': useremail,
-                                                        'img': userimage,
-                                                        'cmnt': comment,
-                                                        'date': date.toString()
-                                                    });
-                                                    var cmntData = {
-                                                        "postId": postId,
-                                                        "users": user
+                                            //console.log("result"+result);
+                                            if (result.length > 0) {
+                                                console.log(result);
+
+                                                for (var i = 0; i < result.length; i++) {
+                                                    if (result[i].type == "iOS") {
+                                                        deviceIOS.push(result[i].ID);
+                                                    } else {
+                                                        deviceAndroid.push(result[i].ID);
                                                     }
-                                                    db.collection(tableName).insertOne(cmntData, function(err, result3) {
-                                                            //res.json({'success':'comment posted'});
-                                                            dbUtil.getConnection(function(db) {
-                                                                    var tableName = "T_" + tenant + "_" + channelId + "_DEVICES";
-                                                                    console.log(tableName);
-                                                                    db.collection(tableName).find({}, {
-                                                                        _id: 0
-                                                                    }).toArray(function(err, result) {
-                                                                        //console.log("result"+result);
-                                                                            if (result.length > 0) {
-                                                                                console.log(result);
-
-                                                                                for (var i = 0; i < result.length; i++) {
-                                                                                    if (result[i].type == "iOS") {
-                                                                                        deviceIOS.push(result[i].ID);
-                                                                                    } else {
-                                                                                        deviceAndroid.push(result[i].ID);
-                                                                                    }
-                                                                                }
-                                                                                /*checking redundant ID from diff channels*/
-                                                                                var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
-                                                                                    return index == self.indexOf(elem);
-                                                                                });
-                                                                                var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
-                                                                                    return index == self.indexOf(elem);
-                                                                                });
-
-                                                                                console.log("iOS devices" + iOSPushDevices);
-                                                                                console.log("Android devices" + AndroidPushDevices);
-
-                                                                                /* Send pushes to Android device */
-
-                                                                                /* checking if devices are more than 1000 */
-                                                                                if (false) {}
-                                                                                /*if (AndroidPushDevices.length > 1000) {
-                                                                                    var deviceGroup = [];
-                                                                                    var AllDevices = [];
-                                                                                    var devicesCount = 0;
-                                                                                    for (var i = 0; i < AndroidPushDevices.length; i++) {
-
-                                                                                        if (devicesCount == 1000) {
-                                                                                            AllDevices.push(deviceGroup);
-                                                                                            deviceGroup = [];
-                                                                                            devicesCount = 0;
-                                                                                            deviceGroup.push(AndroidPushDevices[i]);
-                                                                                            devicesCount = devicesCount + 1;
-                                                                                        } else {
-                                                                                            deviceGroup.push(AndroidPushDevices[i]);
-                                                                                            devicesCount = devicesCount + 1;
-                                                                                        }
-                                                                                    }
-                                                                                    AllDevices.push(deviceGroup);
-                                                                                    //console.log(AllDevices[1]);
-                                                                                    var message = new gcm.Message();
-                                                                                    message.addData('title', title);
-                                                                                    message.addData('message', body);
-                                                                                    message.addData('image', 'www/icon.png');
-                                                                                    if (picture == "" || picture == null || picture == undefined) {} else {
-                                                                                        message.addData('style', 'picture');
-                                                                                        message.addData('picture', picture);
-                                                                                        message.addData('summaryText', body);
-
-                                                                                    }
-                                                                                    message.addData('notId', parseInt(Math.random() * 10000));
-                                                                                    message.addData('content-available', 1);
-
-                                                                                    if (appletName == null || appletName == undefined) {} else {
-                                                                                        message.addData("openApplet", appletName);
-                                                                                    }
-
-                                                                                    groupCount = 0;
-                                                                                    sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
-                                                                                    //res.json(sendSuccess);*/
-                                                                                else {
-                                                                                dbUtil.getConnection(function(db) {
-                                                                                    var tableName = "T_PUSH_TENANTKEYS";
-                                                                                    db.collection(tableName).find({
-                                                                                        "tenant": tenant
-                                                                                    }).toArray(function(err, result) {
-                                                                                        console.log(result);
-                                                                                        if (result.length == 0) {
-                                                                                            res.json({
-                                                                                                "error": "tenant not found"
-                                                                                            });
-                                                                                        } else {
-                                                                                            var apiKey = result[0].gcmKey
-                                                                                            var service = new gcm.Sender(apiKey);
-                                                                                            var message = new gcm.Message();
-                                                                                            message.addData('title', username + " posted a comment.");
-                                                                                            message.addData('message', comment);
-                                                                                            message.addData('image', 'www/icon.png');
-                                                                                            message.addData('notId', parseInt(Math.random() * 10000));
-                                                                                            message.addData('content-available', 1);
-
-                                                                                            if (appletName == null || appletName == undefined) {} else {
-                                                                                                message.addData("openApplet", appletName);
-                                                                                            }
-                                                                                            /*message.addData('actions', [
-                                                                                                { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
-                                                                                                { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
-                                                                                            ]);*/
-
-                                                                                            console.log(apiKey);
-
-                                                                                            service.send(message, {
-                                                                                                registrationTokens: AndroidPushDevices
-                                                                                            }, function(err, response) {
-                                                                                                if (err) {
-                                                                                                    console.error(err + " " + response);
-                                                                                                } else { //console.log(response); 
-
-                                                                                                    res.json({
-                                                                                                        "success": "Comment/Notification sent"
-                                                                                                    });
-
-                                                                                                }
-                                                                                            });
-                                                                                        }
-                                                                                    });
-                                                                                });
-
-
-                                                                            }
-
-
-                                                                            if (iOSPushDevices.length > 0) {
-                                                                                var options = {};
-                                                                                options["production"] = true;
-                                                                                dbUtil.getConnection(function(db) {
-                                                                                    var tableName = "T_PUSH_TENANTKEYS";
-                                                                                    db.collection(tableName).find({
-                                                                                        "tenant": tenant
-                                                                                    }).toArray(function(err, result) {
-                                                                                        console.log(result);
-                                                                                        if (result.length == 0) {
-                                                                                            res.json({
-                                                                                                "error": "tenant not found"
-                                                                                            });
-                                                                                        } else {
-                                                                                            options["cert"] = result[0].cert;
-                                                                                            options["key"] = result[0].key;
-                                                                                        }
-                                                                                    });
-                                                                                });
-
-                                                                                //var certBuffer=fs.readFileSync("cert.pem");
-                                                                                //var keyBuffer=fs.readFileSync("key.pem");
-                                                                                //options["cert"] = certBuffer;
-                                                                                //options["key"] = keyBuffer;
-
-                                                                                var iOSTokens = [];
-                                                                                var apnConnection = new apn.Connection(options)
-
-                                                                                for (var i = 0; i < iOSPushDevices.length; i++) {
-                                                                                    var myDevice = new apn.Device(iOSPushDevices[i]);
-                                                                                    iOSTokens.push(myDevice);
-                                                                                }
-                                                                                //var myDevice = new apn.Device(id);
-
-                                                                                var note = new apn.Notification();
-                                                                                note.title = title;
-                                                                                note.sound = "ping.aiff";
-                                                                                note.alert = {
-                                                                                    'title': title,
-                                                                                    'body': body,
-                                                                                    'openApplet': appletName,
-                                                                                    'click-action': 'View Notification',
-                                                                                    'launch-image': picture
-                                                                                };
-                                                                                note['content-available'] = 1;
-                                                                                //note.payload = {'title': 'Push title1','messageFrom': 'Caroline'};
-
-                                                                                apnConnection.pushNotification(note, iOSTokens);
-                                                                                var iOSPushes = [];
-
-                                                                                /*apnConnection.on("transmitted", function(notification, device) {
-                                                                                    iOSPushes.push(device.token.toString("hex"));
-                                                                                });
-
-                                                                                apnConnection.on("completed", function(notification, device) {
-                                                                                    console.log(iOSPushes);
-                                                                                    pushData.appleDevicesLogs = iOSPushes;
-                                                                                    pushLogEntry(tenant, pushData);
-                                                                                });*/
-
-                                                                                var options = {
-                                                                                    "batchFeedback": true,
-                                                                                    "interval": 300
-                                                                                };
-
-                                                                                var feedback = new apn.Feedback(options);
-                                                                                feedback.on("feedback", function(devices) {
-                                                                                    devices.forEach(function(item) {
-                                                                                        console.log(item.device + "   " + item.time);
-                                                                                    });
-                                                                                });
-                                                                            }
-
-
-
-
-                                                                        }
-                                                                    });
-                                                            });
-                                                        /*res.json({
-                                                            "success": "post liked"
-                                                        });*/
-                                                    });
-                                            } else {
-                                                var cmntData = result[0];
-                                                cmntData.users.push({
-                                                    'un': username,
-                                                    'email': useremail,
-                                                    'img': userimage,
-                                                    'cmnt': comment,
-                                                    'date': date.toString()
+                                                }
+                                                /*checking redundant ID from diff channels*/
+                                                var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
+                                                    return index == self.indexOf(elem);
                                                 });
-                                                db.collection(tableName).updateOne({
-                                                    "postId": postId
-                                                }, {
-                                                    $set: {"users":cmntData.users}
-                                                }, function(err, result3) {
-                                                    /*res.json({
-                                                        'success': 'comment posted'
-                                                    });*/
+                                                var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
+                                                    return index == self.indexOf(elem);
+                                                });
+
+                                                console.log("iOS devices" + iOSPushDevices);
+                                                console.log("Android devices" + AndroidPushDevices);
+
+                                                /* Send pushes to Android device */
+
+                                                /* checking if devices are more than 1000 */
+                                                if (false) {}
+                                                /*if (AndroidPushDevices.length > 1000) {
+                                                    var deviceGroup = [];
+                                                    var AllDevices = [];
+                                                    var devicesCount = 0;
+                                                    for (var i = 0; i < AndroidPushDevices.length; i++) {
+
+                                                        if (devicesCount == 1000) {
+                                                            AllDevices.push(deviceGroup);
+                                                            deviceGroup = [];
+                                                            devicesCount = 0;
+                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                            devicesCount = devicesCount + 1;
+                                                        } else {
+                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                            devicesCount = devicesCount + 1;
+                                                        }
+                                                    }
+                                                    AllDevices.push(deviceGroup);
+                                                    //console.log(AllDevices[1]);
+                                                    var message = new gcm.Message();
+                                                    message.addData('title', title);
+                                                    message.addData('message', body);
+                                                    message.addData('image', 'www/icon.png');
+                                                    if (picture == "" || picture == null || picture == undefined) {} else {
+                                                        message.addData('style', 'picture');
+                                                        message.addData('picture', picture);
+                                                        message.addData('summaryText', body);
+
+                                                    }
+                                                    message.addData('notId', parseInt(Math.random() * 10000));
+                                                    message.addData('content-available', 1);
+
+                                                    if (appletName == null || appletName == undefined) {} else {
+                                                        message.addData("openApplet", appletName);
+                                                    }
+
+                                                    groupCount = 0;
+                                                    sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
+                                                    //res.json(sendSuccess);*/
+                                                else {
                                                     dbUtil.getConnection(function(db) {
-                                                                    var tableName = "T_" + tenant + "_" + channelId + "_DEVICES";
-                                                                    console.log(tableName);
-                                                                    db.collection(tableName).find({}, {
-                                                                        _id: 0
-                                                                    }).toArray(function(err, result) {
-                                                                        //console.log("result"+result);
-                                                                            if (result.length > 0) {
-                                                                                console.log(result);
+                                                        var tableName = "T_PUSH_TENANTKEYS";
+                                                        db.collection(tableName).find({
+                                                            "tenant": tenant
+                                                        }).toArray(function(err, result) {
+                                                            console.log(result);
+                                                            if (result.length == 0) {
+                                                                res.json({
+                                                                    "error": "tenant not found"
+                                                                });
+                                                            } else {
+                                                                var apiKey = result[0].gcmKey
+                                                                var service = new gcm.Sender(apiKey);
+                                                                var message = new gcm.Message();
+                                                                message.addData('title', username + " posted a comment.");
+                                                                message.addData('message', comment);
+                                                                message.addData('image', 'www/icon.png');
+                                                                message.addData('notId', parseInt(Math.random() * 10000));
+                                                                message.addData('content-available', 1);
 
-                                                                                for (var i = 0; i < result.length; i++) {
-                                                                                    if (result[i].type == "iOS") {
-                                                                                        deviceIOS.push(result[i].ID);
-                                                                                    } else {
-                                                                                        deviceAndroid.push(result[i].ID);
-                                                                                    }
-                                                                                }
-                                                                                /*checking redundant ID from diff channels*/
-                                                                                var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
-                                                                                    return index == self.indexOf(elem);
-                                                                                });
-                                                                                var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
-                                                                                    return index == self.indexOf(elem);
-                                                                                });
+                                                                if (appletName == null || appletName == undefined) {} else {
+                                                                    message.addData("openApplet", appletName);
+                                                                }
+                                                                /*message.addData('actions', [
+                                                                    { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
+                                                                    { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
+                                                                ]);*/
 
-                                                                                console.log("iOS devices" + iOSPushDevices);
-                                                                                console.log("Android devices" + AndroidPushDevices);
+                                                                console.log(apiKey);
 
-                                                                                /* Send pushes to Android device */
+                                                                service.send(message, {
+                                                                    registrationTokens: AndroidPushDevices
+                                                                }, function(err, response) {
+                                                                    if (err) {
+                                                                        console.error(err + " " + response);
+                                                                    } else { //console.log(response); 
 
-                                                                                /* checking if devices are more than 1000 */
-                                                                                if (false) {}
-                                                                                /*if (AndroidPushDevices.length > 1000) {
-                                                                                    var deviceGroup = [];
-                                                                                    var AllDevices = [];
-                                                                                    var devicesCount = 0;
-                                                                                    for (var i = 0; i < AndroidPushDevices.length; i++) {
+                                                                        res.json({
+                                                                            "success": "Comment/Notification sent"
+                                                                        });
 
-                                                                                        if (devicesCount == 1000) {
-                                                                                            AllDevices.push(deviceGroup);
-                                                                                            deviceGroup = [];
-                                                                                            devicesCount = 0;
-                                                                                            deviceGroup.push(AndroidPushDevices[i]);
-                                                                                            devicesCount = devicesCount + 1;
-                                                                                        } else {
-                                                                                            deviceGroup.push(AndroidPushDevices[i]);
-                                                                                            devicesCount = devicesCount + 1;
-                                                                                        }
-                                                                                    }
-                                                                                    AllDevices.push(deviceGroup);
-                                                                                    //console.log(AllDevices[1]);
-                                                                                    var message = new gcm.Message();
-                                                                                    message.addData('title', title);
-                                                                                    message.addData('message', body);
-                                                                                    message.addData('image', 'www/icon.png');
-                                                                                    if (picture == "" || picture == null || picture == undefined) {} else {
-                                                                                        message.addData('style', 'picture');
-                                                                                        message.addData('picture', picture);
-                                                                                        message.addData('summaryText', body);
-
-                                                                                    }
-                                                                                    message.addData('notId', parseInt(Math.random() * 10000));
-                                                                                    message.addData('content-available', 1);
-
-                                                                                    if (appletName == null || appletName == undefined) {} else {
-                                                                                        message.addData("openApplet", appletName);
-                                                                                    }
-
-                                                                                    groupCount = 0;
-                                                                                    sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
-                                                                                    //res.json(sendSuccess);*/
-                                                                                else {
-                                                                                dbUtil.getConnection(function(db) {
-                                                                                    var tableName = "T_PUSH_TENANTKEYS";
-                                                                                    db.collection(tableName).find({
-                                                                                        "tenant": tenant
-                                                                                    }).toArray(function(err, result) {
-                                                                                        console.log(result);
-                                                                                        if (result.length == 0) {
-                                                                                            res.json({
-                                                                                                "error": "tenant not found"
-                                                                                            });
-                                                                                        } else {
-                                                                                            var apiKey = result[0].gcmKey
-                                                                                            var service = new gcm.Sender(apiKey);
-                                                                                            var message = new gcm.Message();
-                                                                                            message.addData('title', username + " posted a comment.");
-                                                                                            message.addData('message', comment);
-                                                                                            message.addData('image', 'www/icon.png');
-                                                                                            message.addData('notId', parseInt(Math.random() * 10000));
-                                                                                            message.addData('content-available', 1);
-
-                                                                                            if (appletName == null || appletName == undefined) {} else {
-                                                                                                message.addData("openApplet", appletName);
-                                                                                            }
-                                                                                            /*message.addData('actions', [
-                                                                                                { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
-                                                                                                { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
-                                                                                            ]);*/
-
-                                                                                            console.log(apiKey);
-
-                                                                                            service.send(message, {
-                                                                                                registrationTokens: AndroidPushDevices
-                                                                                            }, function(err, response) {
-                                                                                                if (err) {
-                                                                                                    console.error(err + " " + response);
-                                                                                                } else { //console.log(response); 
-
-                                                                                                    res.json({
-                                                                                                        "success": "Comment/Notification sent"
-                                                                                                    });
-
-                                                                                                }
-                                                                                            });
-                                                                                        }
-                                                                                    });
-                                                                                });
+                                                                    }
+                                                                });
+                                                            }
+                                                        });
+                                                    });
 
 
-                                                                            }
+                                                }
 
 
-                                                                            if (iOSPushDevices.length > 0) {
-                                                                                var options = {};
-                                                                                options["production"] = true;
-                                                                                dbUtil.getConnection(function(db) {
-                                                                                    var tableName = "T_PUSH_TENANTKEYS";
-                                                                                    db.collection(tableName).find({
-                                                                                        "tenant": tenant
-                                                                                    }).toArray(function(err, result) {
-                                                                                        console.log(result);
-                                                                                        if (result.length == 0) {
-                                                                                            res.json({
-                                                                                                "error": "tenant not found"
-                                                                                            });
-                                                                                        } else {
-                                                                                            options["cert"] = result[0].cert;
-                                                                                            options["key"] = result[0].key;
-                                                                                        }
-                                                                                    });
-                                                                                });
+                                                if (iOSPushDevices.length > 0) {
+                                                        var options = {};
+                                                        options.token = {
+                                                            key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
+                                                            keyId: "G8VD8LMAWQ",
+                                                            teamId: "4CL3P3CWEQ",
+                                                        }
+                                                        options["production"] = true;
 
-                                                                                //var certBuffer=fs.readFileSync("cert.pem");
-                                                                                //var keyBuffer=fs.readFileSync("key.pem");
-                                                                                //options["cert"] = certBuffer;
-                                                                                //options["key"] = keyBuffer;
+                                                        let apnProvider = new apn.Provider(options);
+                                                        let notification = new apn.Notification();
+                                                        notification.title = title;
+                                                        notification.body = body;
 
-                                                                                var iOSTokens = [];
-                                                                                var apnConnection = new apn.Connection(options)
-
-                                                                                for (var i = 0; i < iOSPushDevices.length; i++) {
-                                                                                    var myDevice = new apn.Device(iOSPushDevices[i]);
-                                                                                    iOSTokens.push(myDevice);
-                                                                                }
-                                                                                //var myDevice = new apn.Device(id);
-
-                                                                                var note = new apn.Notification();
-                                                                                note.title = title;
-                                                                                note.sound = "ping.aiff";
-                                                                                note.alert = {
-                                                                                    'title': title,
-                                                                                    'body': body,
-                                                                                    'openApplet': appletName,
-                                                                                    'click-action': 'View Notification',
-                                                                                    'launch-image': picture
-                                                                                };
-                                                                                note['content-available'] = 1;
-                                                                                //note.payload = {'title': 'Push title1','messageFrom': 'Caroline'};
-
-                                                                                apnConnection.pushNotification(note, iOSTokens);
-                                                                                var iOSPushes = [];
-
-                                                                                /*apnConnection.on("transmitted", function(notification, device) {
-                                                                                    iOSPushes.push(device.token.toString("hex"));
-                                                                                });
-
-                                                                                apnConnection.on("completed", function(notification, device) {
-                                                                                    console.log(iOSPushes);
-                                                                                    pushData.appleDevicesLogs = iOSPushes;
-                                                                                    pushLogEntry(tenant, pushData);
-                                                                                });*/
-
-                                                                                var options = {
-                                                                                    "batchFeedback": true,
-                                                                                    "interval": 300
-                                                                                };
-
-                                                                                var feedback = new apn.Feedback(options);
-                                                                                feedback.on("feedback", function(devices) {
-                                                                                    devices.forEach(function(item) {
-                                                                                        console.log(item.device + "   " + item.time);
-                                                                                    });
-                                                                                });
-                                                                            }
-
-
-
-
-                                                                        }
+                                                        dbUtil.getConnection(function(db) {
+                                                            var tableName = "T_PUSH_TENANTKEYS";
+                                                            db.collection(tableName).find({
+                                                                "tenant": tenant
+                                                            }).toArray(function(err, result) {
+                                                                console.log(result);
+                                                                if (result.length == 0) {
+                                                                    res.json({
+                                                                        "error": "tenant not found"
                                                                     });
+                                                                } else {
+                                                                    notification.topic = result[0].bundleId;
+                                                                    apnProvider.send(notification, iOSPushDevices).then((result) => {
+                                                            res.json({
+                                                                "success": "Notification sent"
                                                             });
+                                                        });
+                                                                }
+                                                            });
+                                                        });
 
-
-                                                    
-                                                });
+                                                        
+                                                    }
                                             }
                                         });
+                                    });
+                                    /*res.json({
+                                        "success": "post liked"
+                                    });*/
+                                });
+                            } else {
+                                var cmntData = result[0];
+                                cmntData.users.push({
+                                    'un': username,
+                                    'email': useremail,
+                                    'img': userimage,
+                                    'cmnt': comment,
+                                    'date': date.toString()
+                                });
+                                db.collection(tableName).updateOne({
+                                    "postId": postId
+                                }, {
+                                    $set: {
+                                        "users": cmntData.users
+                                    }
+                                }, function(err, result3) {
+                                    /*res.json({
+                                        'success': 'comment posted'
+                                    });*/
+                                    dbUtil.getConnection(function(db) {
+                                        var tableName = "T_" + tenant + "_" + channelId + "_DEVICES";
+                                        console.log(tableName);
+                                        db.collection(tableName).find({}, {
+                                            _id: 0
+                                        }).toArray(function(err, result) {
+                                            //console.log("result"+result);
+                                            if (result.length > 0) {
+                                                console.log(result);
+
+                                                for (var i = 0; i < result.length; i++) {
+                                                    if (result[i].type == "iOS") {
+                                                        deviceIOS.push(result[i].ID);
+                                                    } else {
+                                                        deviceAndroid.push(result[i].ID);
+                                                    }
+                                                }
+                                                /*checking redundant ID from diff channels*/
+                                                var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
+                                                    return index == self.indexOf(elem);
+                                                });
+                                                var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
+                                                    return index == self.indexOf(elem);
+                                                });
+
+                                                console.log("iOS devices" + iOSPushDevices);
+                                                console.log("Android devices" + AndroidPushDevices);
+
+                                                /* Send pushes to Android device */
+
+                                                /* checking if devices are more than 1000 */
+                                                if (false) {}
+                                                /*if (AndroidPushDevices.length > 1000) {
+                                                    var deviceGroup = [];
+                                                    var AllDevices = [];
+                                                    var devicesCount = 0;
+                                                    for (var i = 0; i < AndroidPushDevices.length; i++) {
+
+                                                        if (devicesCount == 1000) {
+                                                            AllDevices.push(deviceGroup);
+                                                            deviceGroup = [];
+                                                            devicesCount = 0;
+                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                            devicesCount = devicesCount + 1;
+                                                        } else {
+                                                            deviceGroup.push(AndroidPushDevices[i]);
+                                                            devicesCount = devicesCount + 1;
+                                                        }
+                                                    }
+                                                    AllDevices.push(deviceGroup);
+                                                    //console.log(AllDevices[1]);
+                                                    var message = new gcm.Message();
+                                                    message.addData('title', title);
+                                                    message.addData('message', body);
+                                                    message.addData('image', 'www/icon.png');
+                                                    if (picture == "" || picture == null || picture == undefined) {} else {
+                                                        message.addData('style', 'picture');
+                                                        message.addData('picture', picture);
+                                                        message.addData('summaryText', body);
+
+                                                    }
+                                                    message.addData('notId', parseInt(Math.random() * 10000));
+                                                    message.addData('content-available', 1);
+
+                                                    if (appletName == null || appletName == undefined) {} else {
+                                                        message.addData("openApplet", appletName);
+                                                    }
+
+                                                    groupCount = 0;
+                                                    sendGroupAndroidPushes(AllDevices, message, pushData, tenant);
+                                                    //res.json(sendSuccess);*/
+                                                else {
+                                                    dbUtil.getConnection(function(db) {
+                                                        var tableName = "T_PUSH_TENANTKEYS";
+                                                        db.collection(tableName).find({
+                                                            "tenant": tenant
+                                                        }).toArray(function(err, result) {
+                                                            console.log(result);
+                                                            if (result.length == 0) {
+                                                                res.json({
+                                                                    "error": "tenant not found"
+                                                                });
+                                                            } else {
+                                                                var apiKey = result[0].gcmKey
+                                                                var service = new gcm.Sender(apiKey);
+                                                                var message = new gcm.Message();
+                                                                message.addData('title', username + " posted a comment.");
+                                                                message.addData('message', comment);
+                                                                message.addData('image', 'www/icon.png');
+                                                                message.addData('notId', parseInt(Math.random() * 10000));
+                                                                message.addData('content-available', 1);
+
+                                                                if (appletName == null || appletName == undefined) {} else {
+                                                                    message.addData("openApplet", appletName);
+                                                                }
+                                                                /*message.addData('actions', [
+                                                                    { icon: "emailGuests", title: "EMAIL GUESTS", callback: "app.emailGuests"},
+                                                                    { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
+                                                                ]);*/
+
+                                                                console.log(apiKey);
+
+                                                                service.send(message, {
+                                                                    registrationTokens: AndroidPushDevices
+                                                                }, function(err, response) {
+                                                                    if (err) {
+                                                                        console.error(err + " " + response);
+                                                                    } else { //console.log(response); 
+
+                                                                        res.json({
+                                                                            "success": "Comment/Notification sent"
+                                                                        });
+
+                                                                    }
+                                                                });
+                                                            }
+                                                        });
+                                                    });
+
+
+                                                }
+
+
+                                                if (iOSPushDevices.length > 0) {
+                                                        var options = {};
+                                                        options.token = {
+                                                            key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
+                                                            keyId: "G8VD8LMAWQ",
+                                                            teamId: "4CL3P3CWEQ",
+                                                        }
+                                                        options["production"] = true;
+
+                                                        let apnProvider = new apn.Provider(options);
+                                                        let notification = new apn.Notification();
+                                                        notification.title = title;
+                                                        notification.body = body;
+
+                                                        dbUtil.getConnection(function(db) {
+                                                            var tableName = "T_PUSH_TENANTKEYS";
+                                                            db.collection(tableName).find({
+                                                                "tenant": tenant
+                                                            }).toArray(function(err, result) {
+                                                                console.log(result);
+                                                                if (result.length == 0) {
+                                                                    res.json({
+                                                                        "error": "tenant not found"
+                                                                    });
+                                                                } else {
+                                                                    notification.topic = result[0].bundleId;
+                                                                    apnProvider.send(notification, iOSPushDevices).then((result) => {
+                                                            res.json({
+                                                                "success": "Notification sent"
+                                                            });
+                                                        });
+                                                                }
+                                                            });
+                                                        });
+
+                                                        
+                                                    }
+
+                                            }
+                                        });
+                                    });
+
+
 
                                 });
+                            }
                         });
+
+                    });
                 });
+            });
         });
-} else {
-    res.status(401).json({
-        "Error": "Parameters missing"
-    });
-}
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
 }
 
 
