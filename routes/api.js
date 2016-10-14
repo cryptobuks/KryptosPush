@@ -115,4 +115,7 @@ router.route("/push/getPostComments")
 router.route("/push/sendPush")
     .post(generalPushController.sendPush);
 
+router.route("/push/sendGeneralPush")
+    .post(generalPushController.sendGeneralPush);
+
 module.exports = router;
