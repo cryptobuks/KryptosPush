@@ -9,11 +9,9 @@ var ObjectId = require('mongodb').ObjectID;
 
 
 exports.addTenantPushKeys = function(req, res, next) {
-    if (req.body && req.body.tenant && req.body.cert && req.body.key && req.body.bundleId && req.body.gcmKey) {
+    if (req.body && req.body.tenant && req.body.bundleId && req.body.gcmKey) {
 
         var tenant = req.body.tenant;
-        var cert = req.body.cert;
-        var key = req.body.key;
         var gcmKey = req.body.gcmKey;
         var bundleId = req.body.bundleId;
         try {
@@ -37,8 +35,6 @@ exports.addTenantPushKeys = function(req, res, next) {
 
                         var data = {
                             'tenant': tenant,
-                            'cert': cert,
-                            'key': key,
                             'gcmKey': gcmKey,
                             'bundleId': bundleId
                         };
@@ -62,11 +58,9 @@ exports.addTenantPushKeys = function(req, res, next) {
 
 
 exports.updateTenantPushKeys = function(req, res, next) {
-    if (req.body && req.body.tenant && req.body.cert && req.body.key && req.body.bundleId) {
+    if (req.body && req.body.tenant && req.body.gcmKey && req.body.bundleId) {
 
         var tenant = req.body.tenant;
-        var cert = req.body.cert;
-        var key = req.body.key;
         var gcmKey = req.body.gcmKey;
         var bundleId = req.body.bundleId;
         try {
@@ -83,8 +77,6 @@ exports.updateTenantPushKeys = function(req, res, next) {
                     } else {
                         var data = {
                             'tenant': tenant,
-                            'cert': cert,
-                            'key': key,
                             'gcmKey': gcmKey,
                             'bundleId': bundleId
                         };
@@ -93,8 +85,6 @@ exports.updateTenantPushKeys = function(req, res, next) {
                         }, {
                             $set: {
                                 'tenant': tenant,
-                                'cert': cert,
-                                'key': key,
                                 'gcmKey': gcmKey,
                                 'bundleId': bundleId
                             }
@@ -118,12 +108,9 @@ exports.updateTenantPushKeys = function(req, res, next) {
 
 
 exports.getTenantPushKeys = function(req, res, next) {
-    if (req.body && req.body.tenant && req.body.cert && req.body.key) {
+    if (req.body && req.body.tenant) {
 
         var tenant = req.body.tenant;
-        var cert = req.body.cert;
-        var key = req.body.key;
-        var gcmKey = req.body.gcmKey
         try {
             dbUtil.getConnection(function(db) {
                 var tableName = "T_PUSH_TENANTKEYS";
