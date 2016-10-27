@@ -660,7 +660,9 @@ exports.sendPushToChannel = function(req, res, next) {
                                                     }
                                                 }
                                             } else {
-
+                                                res.json({
+                                                        "error": "No registered devices found."
+                                                    });
                                             }
                                         });
                                     });
