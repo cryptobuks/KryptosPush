@@ -123,9 +123,7 @@ exports.getTenantPushKeys = function(req, res, next) {
                             "error": "tenant not found"
                         });
                     } else {
-                        res.json({
-                            result
-                        });
+                        res.json(result[0]);
                     }
                 });
             });
