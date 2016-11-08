@@ -363,7 +363,7 @@ exports.getChannelDevicesCount = function(req, res, next) {
             dbUtil.getConnection(function(db) {
                 var tableName = "T_" + tenant + "_" + channel + "_DEVICES";
                 db.collection(tableName).count(function(err, result) {
-                    res.json(result);
+                    res.json({"count":result});
                 });
             });
         } catch (e) {
