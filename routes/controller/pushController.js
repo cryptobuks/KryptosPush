@@ -357,6 +357,28 @@ exports.getChannelDevices = function(req, res, next) {
 }
 
 
+exports.getChannelDevicesCount = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.channel) {
+        var tenant = req.body.tenant;
+        var channel = req.body.channel;
+        try {
+            dbUtil.getConnection(function(db) {
+                var tableName = "T_" + tenant + "_" + channel + "_DEVICES";
+                db.collection(tableName).count(function(err, result) {
+                    res.json(result);
+                });
+            });
+        } catch (e) {
+            console.log(e)
+        }
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+
 
 
 var pushLogEntry = function(tenant, data) {
@@ -491,7 +513,20 @@ exports.sendPushToChannel = function(req, res, next) {
                                     dbUtil.getConnection(function(db) {
                                         var tableName = "T_" + tenant + "_" + channel[chlen] + "_DEVICES";
                                         console.log(tableName);
-                                        db.collection(tableName).find({}, {
+
+                                        if (deviceType == "all" || deviceType == undefined || deviceType == null) {
+                                            var filterQuery = {}
+                                        } else if (deviceType == "Android") {
+                                            var filterQuery = {
+                                                "type": "Android"
+                                            }
+                                        } else {
+                                            var filterQuery = {
+                                                "type": "iOS"
+                                            }
+                                        }
+                                        console.log(filterQuery);
+                                        db.collection(tableName).find(filterQuery, {
                                             _id: 0
                                         }).toArray(function(err, result) {
                                             if (result.length > 0) {
@@ -648,21 +683,21 @@ exports.sendPushToChannel = function(req, res, next) {
                                                                 } else {
                                                                     notification.topic = result[0].bundleId;
                                                                     apnProvider.send(notification, iOSPushDevices).then((result) => {
-                                                                    res.json({
-                                                                        "success": "Notification sent"
+                                                                        res.json({
+                                                                            "success": "Notification sent"
                                                                         });
                                                                     });
                                                                 }
                                                             });
                                                         });
                                                         console.log("Ios Push");
-                                                        
+
                                                     }
                                                 }
                                             } else {
                                                 res.json({
-                                                        "error": "No registered devices found."
-                                                    });
+                                                    "error": "No registered devices found."
+                                                });
                                             }
                                         });
                                     });
@@ -1633,42 +1668,42 @@ exports.postComment = function(req, res, next) {
 
 
                                                 if (iOSPushDevices.length > 0) {
-                                                        var options = {};
-                                                        options.token = {
-                                                            key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
-                                                            keyId: "G8VD8LMAWQ",
-                                                            teamId: "4CL3P3CWEQ",
-                                                        }
-                                                        options["production"] = true;
-
-                                                        let apnProvider = new apn.Provider(options);
-                                                        let notification = new apn.Notification();
-                                                        notification.title = title;
-                                                        notification.body = body;
-
-                                                        dbUtil.getConnection(function(db) {
-                                                            var tableName = "T_PUSH_TENANTKEYS";
-                                                            db.collection(tableName).find({
-                                                                "tenant": tenant
-                                                            }).toArray(function(err, result) {
-                                                                console.log(result);
-                                                                if (result.length == 0) {
-                                                                    res.json({
-                                                                        "error": "tenant not found"
-                                                                    });
-                                                                } else {
-                                                                    notification.topic = result[0].bundleId;
-                                                                    apnProvider.send(notification, iOSPushDevices).then((result) => {
-                                                            res.json({
-                                                                "success": "Notification sent"
-                                                            });
-                                                        });
-                                                                }
-                                                            });
-                                                        });
-
-                                                        
+                                                    var options = {};
+                                                    options.token = {
+                                                        key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
+                                                        keyId: "G8VD8LMAWQ",
+                                                        teamId: "4CL3P3CWEQ",
                                                     }
+                                                    options["production"] = true;
+
+                                                    let apnProvider = new apn.Provider(options);
+                                                    let notification = new apn.Notification();
+                                                    notification.title = title;
+                                                    notification.body = body;
+
+                                                    dbUtil.getConnection(function(db) {
+                                                        var tableName = "T_PUSH_TENANTKEYS";
+                                                        db.collection(tableName).find({
+                                                            "tenant": tenant
+                                                        }).toArray(function(err, result) {
+                                                            console.log(result);
+                                                            if (result.length == 0) {
+                                                                res.json({
+                                                                    "error": "tenant not found"
+                                                                });
+                                                            } else {
+                                                                notification.topic = result[0].bundleId;
+                                                                apnProvider.send(notification, iOSPushDevices).then((result) => {
+                                                                    res.json({
+                                                                        "success": "Notification sent"
+                                                                    });
+                                                                });
+                                                            }
+                                                        });
+                                                    });
+
+
+                                                }
                                             }
                                         });
                                     });
@@ -1819,42 +1854,42 @@ exports.postComment = function(req, res, next) {
 
 
                                                 if (iOSPushDevices.length > 0) {
-                                                        var options = {};
-                                                        options.token = {
-                                                            key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
-                                                            keyId: "G8VD8LMAWQ",
-                                                            teamId: "4CL3P3CWEQ",
-                                                        }
-                                                        options["production"] = true;
-
-                                                        let apnProvider = new apn.Provider(options);
-                                                        let notification = new apn.Notification();
-                                                        notification.title = title;
-                                                        notification.body = body;
-
-                                                        dbUtil.getConnection(function(db) {
-                                                            var tableName = "T_PUSH_TENANTKEYS";
-                                                            db.collection(tableName).find({
-                                                                "tenant": tenant
-                                                            }).toArray(function(err, result) {
-                                                                console.log(result);
-                                                                if (result.length == 0) {
-                                                                    res.json({
-                                                                        "error": "tenant not found"
-                                                                    });
-                                                                } else {
-                                                                    notification.topic = result[0].bundleId;
-                                                                    apnProvider.send(notification, iOSPushDevices).then((result) => {
-                                                            res.json({
-                                                                "success": "Notification sent"
-                                                            });
-                                                        });
-                                                                }
-                                                            });
-                                                        });
-
-                                                        
+                                                    var options = {};
+                                                    options.token = {
+                                                        key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
+                                                        keyId: "G8VD8LMAWQ",
+                                                        teamId: "4CL3P3CWEQ",
                                                     }
+                                                    options["production"] = true;
+
+                                                    let apnProvider = new apn.Provider(options);
+                                                    let notification = new apn.Notification();
+                                                    notification.title = title;
+                                                    notification.body = body;
+
+                                                    dbUtil.getConnection(function(db) {
+                                                        var tableName = "T_PUSH_TENANTKEYS";
+                                                        db.collection(tableName).find({
+                                                            "tenant": tenant
+                                                        }).toArray(function(err, result) {
+                                                            console.log(result);
+                                                            if (result.length == 0) {
+                                                                res.json({
+                                                                    "error": "tenant not found"
+                                                                });
+                                                            } else {
+                                                                notification.topic = result[0].bundleId;
+                                                                apnProvider.send(notification, iOSPushDevices).then((result) => {
+                                                                    res.json({
+                                                                        "success": "Notification sent"
+                                                                    });
+                                                                });
+                                                            }
+                                                        });
+                                                    });
+
+
+                                                }
 
                                             }
                                         });

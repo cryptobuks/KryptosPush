@@ -60,6 +60,9 @@ router.route("/push/getAllDevices")
 router.route("/push/getChannelDevices")
     .post(pushPluginController.getChannelDevices);
 
+router.route("/push/getChannelDevicesCount")
+    .post(pushPluginController.getChannelDevicesCount);
+
 router.route("/push/sendPushToChannel")
     .post(pushPluginController.sendPushToChannel);
     
