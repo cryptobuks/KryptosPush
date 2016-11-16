@@ -1676,8 +1676,8 @@ exports.postComment = function(req, res, next) {
 
                                                     let apnProvider = new apn.Provider(options);
                                                     let notification = new apn.Notification();
-                                                    notification.title = title;
-                                                    notification.body = body;
+                                                    notification.title = username + " posted a comment.";
+                                                    notification.body = comment;
 
                                                     dbUtil.getConnection(function(db) {
                                                         var tableName = "T_PUSH_TENANTKEYS";
@@ -1862,8 +1862,8 @@ exports.postComment = function(req, res, next) {
 
                                                     let apnProvider = new apn.Provider(options);
                                                     let notification = new apn.Notification();
-                                                    notification.title = title;
-                                                    notification.body = body;
+                                                    notification.title = username + " posted a comment.";
+                                                    notification.body = comment;
 
                                                     dbUtil.getConnection(function(db) {
                                                         var tableName = "T_PUSH_TENANTKEYS";
