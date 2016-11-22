@@ -70,6 +70,7 @@ exports.sendPush = function(req, res, next) {
             notification.title = title;
             notification.body = body;
             notification.topic = bundleId;
+            notification.sound = "ping.aiff";
 
             apnProvider.send(notification,deviceIOS).then( (result) => {
                         res.json({
@@ -149,6 +150,7 @@ exports.sendGeneralPush = function(req, res, next) {
             let notification = new apn.Notification();
             notification.title = title;
             notification.body = body;
+            notification.sound = "ping.aiff";
             notification.topic = bundleId;
 
             apnProvider.send(notification,deviceIOS).then( (result) => {
