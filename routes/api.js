@@ -113,6 +113,12 @@ router.route("/push/postComment")
     
 router.route("/push/getPostComments")
     .post(pushPluginController.getPostComments);
+
+router.route("/push/deletePost")
+    .post(pushPluginController.deletePost);
+
+router.route("/push/updatePost")
+    .post(pushPluginController.updatePost);
     
     
 router.route("/push/sendPush")

@@ -874,17 +874,26 @@ exports.getPushLogs = function(req, res, next) {
 exports.getTenantFeed = function(req, res, next) {
     if (req.body && req.body.tenant) {
         var tenant = req.body.tenant;
+        var postObjectID = req.body.postObjectID;
+        if(postObjectID == undefined || postObjectID == null || postObjectID == ""){
+            var query={};
+        }else{
+            //find({_id:{"$lt":ObjectId("57f40cd17024aeb4d132b272")}}).limit(5).sort({"_id":-1})
+            var query={_id:{"$lt":ObjectId(postObjectID)}}
+        }
         dbUtil.getConnection(function(db) {
             var tableName = "T_" + tenant + "_FEED";
-            db.collection(tableName).find().sort({
+            db.collection(tableName).find(query).limit(5).sort({
                 _id: -1
             }).toArray(function(err, result) {
-                console.log(result);
+                //console.log(result);
                 if (result.length > 0) {
-                    res.json(result);
+                db.collection(tableName).count(function(err,counts){
+                    res.json({"posts":result,"postCounts":counts});
+                });
                 } else {
-                    res.json({
-                        "error": "No logs found."
+                    db.collection(tableName).count(function(err,counts){
+                    res.json({"posts":[],"postCounts":counts});
                     });
                 }
             });
@@ -901,18 +910,28 @@ exports.getTenantChannelFeed = function(req, res, next) {
     if (req.body && req.body.tenant && req.body.channelId) {
         var tenant = req.body.tenant;
         var channelId = req.body.channelId;
+        var postObjectID = req.body.postObjectID;
+        if(postObjectID == undefined || postObjectID == null || postObjectID == ""){
+            var query={};
+        }else{
+            //find({_id:{"$lt":ObjectId("57f40cd17024aeb4d132b272")}}).limit(5).sort({"_id":-1})
+            var query={_id:{"$lt":ObjectId(postObjectID)}}
+        }
         dbUtil.getConnection(function(db) {
             var tableName = "T_" + tenant + "_" + channelId + "_FEED";
-            db.collection(tableName).find().sort({
+            db.collection(tableName).find(query).limit(5).sort({
                 _id: -1
             }).toArray(function(err, result) {
-                console.log(result);
+                //console.log(result);
                 if (result.length > 0) {
-                    res.json(result);
+                db.collection(tableName).count(function(err,counts){
+                    res.json({"posts":result,"postCounts":counts});
+                });
                 } else {
-                    res.json({
-                        "error": "No logs found."
+                    db.collection(tableName).count(function(err,counts){
+                    res.json({"posts":[],"postCounts":counts});
                     });
+                    
                 }
             });
         });
@@ -1931,6 +1950,105 @@ exports.getPostComments = function(req, res, next) {
                 } else {
                     res.json({
                         "error": "comment not found"
+                    });
+                }
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+exports.deletePost = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.postId && req.body.channelId) {
+        var tenant = req.body.tenant;
+        var channelId = req.body.channelId;
+        var postId = req.body.postId;
+
+        //var tableName = "T_" + tenant + "_" + channelId + "_POSTCOMMENTS";
+        var tableName = "T_" + tenant + "_FEED";
+        dbUtil.getConnection(function(db) {
+            db.collection(tableName).findOneAndDelete({
+                'postId': postId
+            },function(err, result) {
+                if(result.value != null){
+                if(result.value.postId == postId){
+                        var tableName = "T_" + tenant + "_" + channelId + "_FEED";
+                        db.collection(tableName).findOneAndDelete({
+                            'postId': postId
+                        },function(err, result) {
+                            if(result.value != null){
+                                if(result.value.postId == postId){
+                                    res.json({"success":"post deleted"});
+                                }
+                            }
+                            else{
+                                res.json({
+                                    "error": "post not found"
+                                });
+                            }
+                        });
+                        //res.json({"success":"post deleted"});
+                    }
+                else {
+                    res.json({
+                        "error": "post not found"
+                    });
+                    }
+                }else{
+                    res.json({
+                        "error": "post not found"
+                    });
+                }
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+
+exports.updatePost = function(req, res, next) {
+    
+
+    if (req.body && req.body.tenant && req.body.postId && req.body.channelId) {
+        var tenant = req.body.tenant;
+        var channelId = req.body.channelId;
+        var postId = req.body.postId;
+
+        var postContent = req.body;
+        delete postContent._id;
+        console.log(postContent);
+        
+        var tableName = "T_" + tenant + "_FEED";
+        dbUtil.getConnection(function(db) {
+            db.collection(tableName).replaceOne({
+                'postId': postId
+            },postContent,function(err, result) {
+                console.log(result);
+                if(result.result.ok == 1 && result.result.nModified == 1){
+                    var tableName = "T_" + tenant + "_" + channelId + "_FEED";
+                        db.collection(tableName).replaceOne({
+                            'postId': postId
+                        },postContent,function(err, result) {
+                            if(result.result.ok == 1 && result.result.nModified == 1){
+                            res.json({"success":"post updated"});    
+                            }else{
+                             res.json({
+                                    "error": "post not found"
+                                });   
+                            }
+                        });
+            
+                        
+                    }
+                else {
+                    res.json({
+                        "error": "post not found"
                     });
                 }
             });
