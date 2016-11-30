@@ -2030,12 +2030,12 @@ exports.updatePost = function(req, res, next) {
                 'postId': postId
             },postContent,function(err, result) {
                 console.log(result);
-                if(result.result.ok == 1 && result.result.nModified == 1){
+                if(result.result.ok == 1 && result.modifiedCount == 1){
                     var tableName = "T_" + tenant + "_" + channelId + "_FEED";
                         db.collection(tableName).replaceOne({
                             'postId': postId
                         },postContent,function(err, result) {
-                            if(result.result.ok == 1 && result.result.nModified == 1){
+                            if(result.result.ok == 1 && result.modifiedCount == 1){
                             res.json({"success":"post updated"});    
                             }else{
                              res.json({
