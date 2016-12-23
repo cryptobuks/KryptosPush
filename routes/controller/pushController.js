@@ -258,7 +258,7 @@ exports.updateDevice = function(req, res, next) {
                             'ID': ID,
                             'type': type,
                             'channel': channel,
-                            'others': others,
+                            'others': others
                         };
                         db.collection(tableName).updateOne({
                             "ID": ID
@@ -638,7 +638,7 @@ exports.sendPushToChannel = function(req, res, next) {
                                                                     }, function(err, response) {
                                                                         if (err) {
                                                                             console.error(err + " " + response);
-                                                                        } else { //console.log(response); 
+                                                                        } else { //console.log(response);
                                                                             pushData.AndroidDevicesLogs = response;
                                                                             res.json({
                                                                                 "success": "Notification sent"
@@ -931,7 +931,7 @@ exports.getTenantChannelFeed = function(req, res, next) {
                     db.collection(tableName).count(function(err,counts){
                     res.json({"posts":[],"postCounts":counts});
                     });
-                    
+
                 }
             });
         });
@@ -1669,7 +1669,7 @@ exports.postComment = function(req, res, next) {
                                                                 }, function(err, response) {
                                                                     if (err) {
                                                                         console.error(err + " " + response);
-                                                                    } else { //console.log(response); 
+                                                                    } else { //console.log(response);
 
                                                                         res.json({
                                                                             "success": "Comment/Notification sent"
@@ -1856,7 +1856,7 @@ exports.postComment = function(req, res, next) {
                                                                 }, function(err, response) {
                                                                     if (err) {
                                                                         console.error(err + " " + response);
-                                                                    } else { //console.log(response); 
+                                                                    } else { //console.log(response);
 
                                                                         res.json({
                                                                             "success": "Comment/Notification sent"
@@ -2013,7 +2013,7 @@ exports.deletePost = function(req, res, next) {
 
 
 exports.updatePost = function(req, res, next) {
-    
+
 
     if (req.body && req.body.tenant && req.body.postId && req.body.channelId) {
         var tenant = req.body.tenant;
@@ -2023,7 +2023,7 @@ exports.updatePost = function(req, res, next) {
         var postContent = req.body;
         delete postContent._id;
         console.log(postContent);
-        
+
         var tableName = "T_" + tenant + "_FEED";
         dbUtil.getConnection(function(db) {
             db.collection(tableName).replaceOne({
@@ -2036,15 +2036,15 @@ exports.updatePost = function(req, res, next) {
                             'postId': postId
                         },postContent,function(err, result) {
                             if(result.result.ok == 1 && result.modifiedCount == 1){
-                            res.json({"success":"post updated"});    
+                            res.json({"success":"post updated"});
                             }else{
                              res.json({
                                     "error": "post not found"
-                                });   
+                                });
                             }
                         });
-            
-                        
+
+
                     }
                 else {
                     res.json({
@@ -2053,6 +2053,212 @@ exports.updatePost = function(req, res, next) {
                 }
             });
         });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+exports.sendPushToUser = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.title && req.body.message && req.body.externaluserid) {
+        var tenant = req.body.tenant;
+        var title = req.body.title;
+        var body = req.body.message;
+        var externaluserid = req.body.externaluserid;
+        var deviceIOS = [];
+        var deviceAndroid = [];
+        var picture = null;
+        var appletName = null;
+
+        dbUtil.getConnection(function(db) {
+            var tableName = "T_" + tenant + "_all_DEVICES";
+            console.log(tableName);
+            var filterQuery = {"others" : {"userid" : externaluserid }};
+            console.log(filterQuery);
+            db.collection(tableName).find(filterQuery, {
+                _id: 0
+            }).toArray(function(err, result) {
+                if (result.length > 0) {
+                    //console.log(result);
+                    for (var i = 0; i < result.length; i++) {
+                        if (result[i].type == "iOS") {
+                            deviceIOS.push(result[i].ID);
+                        } else {
+                            deviceAndroid.push(result[i].ID);
+                        }
+                    }
+                    /*checking redundant ID from diff channels*/
+                    var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
+                        return index == self.indexOf(elem);
+                    });
+                    var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
+                        return index == self.indexOf(elem);
+                    });
+
+                    console.log("iOS devices" + iOSPushDevices);
+                    console.log("Android devices" + AndroidPushDevices);
+
+                    var tableName = "T_" + tenant + "_PUSHLOGS";
+                    var data = {
+                        'title': title,
+                        'channel': null,
+                        'body': body,
+                        "userid" : externaluserid,
+                        'appleDevicesLogs': '',
+                        'AndroidDevicesLogs': ''
+                    };
+                    db.collection(tableName).insertOne(data, function(err, result3) {
+                        console.log(data);
+                        var pushData = data;
+                        var tableName = "T_PUSH_TENANTKEYS";
+                        db.collection(tableName).find({
+                            "tenant": tenant
+                        }).toArray(function(err, tenantkeysresult) {
+                            console.log(result);
+                            if (tenantkeysresult.length == 0) {
+                                res.json({
+                                    "error": "tenant not found"
+                                });
+                            } else {
+
+                                if(AndroidPushDevices.length > 0) {
+                                  sendToAndroidDevices(title, body, tenant, AndroidPushDevices, tenantkeysresult[0], pushData);
+                                }
+
+                                if (iOSPushDevices.length > 0) {
+                                    sendToIOSDevices(title, body, tenant, iOSPushDevices, tenantkeysresult[0], pushData);
+                                }
+
+                                res.json({
+                                     "success": "Notification sent",
+                                     "devices" : result
+                                 });
+                            }
+                        });
+                    });
+                } else {
+                    res.json({
+                        "error": "No registered devices found."
+                    });
+                }
+            });
+        });
+
+    }else {
+        res.status(401).json({"Error":"Body should contain 'tenant', 'title', 'message' and 'externaluserid' "});
+    }
+}
+
+var sendToAndroidDevices = function(title, body, tenant, AndroidPushDevices, tenantkeysresult, pushData) {
+    var apiKey = tenantkeysresult.gcmKey
+    var service = new gcm.Sender(apiKey);
+    var message = new gcm.Message();
+    message.addData('title', title);
+    message.addData('message', body);
+    message.addData('image', 'www/icon.png');
+    message.addData('notId', parseInt(Math.random() * 10000));
+    message.addData('content-available', 1);
+
+    console.log(apiKey);
+
+    service.send(message, {
+        registrationTokens: AndroidPushDevices
+    }, function(err, response) {
+        if (err) {
+            console.log("AK inside error");
+            console.error(err + " " + response);
+        } else { //console.log(response);
+            pushData.AndroidDevicesLogs = response;
+            // res.json({
+            //     "success": "Notification sent"
+            // });
+            pushLogEntry(tenant, pushData);
+        }
+    });
+}
+
+var sendToIOSDevices = function(title, body, tenant, iOSPushDevices, pushData) {
+      var options = {};
+      options.token = {
+          key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
+          keyId: "G8VD8LMAWQ",
+          teamId: "4CL3P3CWEQ",
+      }
+      options["production"] = true;
+
+      let apnProvider = new apn.Provider(options);
+      let notification = new apn.Notification();
+      notification.title = title;
+      notification.body = body;
+      notification.sound = "ping.aiff";
+      var iOSBundleID;
+      dbUtil.getConnection(function(db) {
+          var tableName = "T_PUSH_TENANTKEYS";
+          db.collection(tableName).find({
+              "tenant": tenant
+          }).toArray(function(err, result) {
+              console.log(result);
+              if (result.length == 0) {
+                  // res.json({
+                  //     "error": "tenant not found"
+                  // });
+              } else {
+                  notification.topic = result[0].bundleId;
+                  apnProvider.send(notification, iOSPushDevices).then((result) => {
+                      // res.json({
+                      //     "success": "Notification sent"
+                      // });
+                  });
+              }
+          });
+      });
+      console.log("Ios Push");
+}
+
+
+exports.updateDeviceToChannel = function(req, res, next) {
+    if (req.body && req.body.id && req.body.tenant && req.body.type && req.body.channel) {
+
+        var tenant = req.body.tenant;
+        var ID = req.body.id;
+        var type = req.body.type;
+        var channel = req.body.channel;
+        var others = (req.body.other == null || req.body.other == undefined) ? '' : req.body.other;
+
+        try {
+            dbUtil.getConnection(function(db) {
+                var tableName = "T_" + tenant + "_" + channel + "_DEVICES";
+                db.collection(tableName).find({
+                    "ID": ID
+                }).toArray(function(err, result) {
+                    console.log(result);
+                    if (result.length > 0) {
+                        var data = {
+                            'ID': ID,
+                            'type': type,
+                            'channel': channel,
+                            'others': others
+                        };
+                        db.collection(tableName).updateOne({
+                            "ID": ID
+                        }, {
+                            $set: data
+                        }, function(err, result3) {
+                            res.json({
+                                "success": "Device updated successfully"
+                            });
+                        });
+                    } else {
+                        res.json({
+                            "error": "Device is not registered."
+                        });
+                    }
+                });
+            });
+        } catch (e) {
+            console.log(e)
+        }
     } else {
         res.status(401).json({
             "Error": "Parameters missing"

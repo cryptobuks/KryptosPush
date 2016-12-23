@@ -45,7 +45,7 @@ router.route("/push/updateTenantPushKeys")
 
 router.route("/push/getTenantPushKeys")
     .post(pushPluginController.getTenantPushKeys);
-    
+
 router.route("/push/adddevice")
     .post(pushPluginController.adddevice);
 
@@ -54,6 +54,9 @@ router.route("/push/adddeviceToChannel")
 
 router.route("/push/updateDevice")
     .post(pushPluginController.updateDevice);
+
+router.route("/push/updateDeviceToChannel")
+        .post(pushPluginController.updateDeviceToChannel);
 router.route("/push/getAllDevices")
     .post(pushPluginController.getAllDevices);
 
@@ -65,7 +68,7 @@ router.route("/push/getChannelDevicesCount")
 
 router.route("/push/sendPushToChannel")
     .post(pushPluginController.sendPushToChannel);
-    
+
 router.route("/push/sendPushToDevice")
     .post(pushPluginController.sendPushToDevice);
 
@@ -77,7 +80,7 @@ router.route("/push/getTenantFeed")
 
 router.route("/push/getTenantChannelFeed")
     .post(pushPluginController.getTenantChannelFeed);
-    
+
 router.route("/push/deleteDeviceFromChannel")
     .post(pushPluginController.deleteDeviceFromChannel);
 
@@ -92,7 +95,7 @@ router.route("/push/likePost")
 
 router.route("/push/deleteLikePost")
     .post(pushPluginController.deleteLikePost);
-    
+
 router.route("/push/getPostLikes")
     .post(pushPluginController.getPostLikes);
 
@@ -110,7 +113,7 @@ router.route("/push/postViews")
 
 router.route("/push/postComment")
     .post(pushPluginController.postComment);
-    
+
 router.route("/push/getPostComments")
     .post(pushPluginController.getPostComments);
 
@@ -119,12 +122,16 @@ router.route("/push/deletePost")
 
 router.route("/push/updatePost")
     .post(pushPluginController.updatePost);
-    
-    
+
+
 router.route("/push/sendPush")
     .post(generalPushController.sendPush);
 
 router.route("/push/sendGeneralPush")
     .post(generalPushController.sendGeneralPush);
+
+router.route("/push/sendPushToUser")
+        .post(pushPluginController.sendPushToUser);
+
 
 module.exports = router;
