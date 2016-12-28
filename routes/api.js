@@ -133,5 +133,17 @@ router.route("/push/sendGeneralPush")
 router.route("/push/sendPushToUser")
         .post(pushPluginController.sendPushToUser);
 
+router.route("/push/getUserNotifications")
+        .post(pushPluginController.getUserNotifications);
+
+
+router.route("/push/updateUserNotificationStatus")
+        .post(pushPluginController.updateUserNotificationStatus);
+
+router.route("/push/getUserNotificationsUnreadCount")
+        .post(pushPluginController.getUserNotificationsUnreadCount);
+
+
+
 
 module.exports = router;

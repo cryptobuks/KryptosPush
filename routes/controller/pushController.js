@@ -2105,6 +2105,7 @@ exports.sendPushToUser = function(req, res, next) {
                         'channel': null,
                         'body': body,
                         "userid" : externaluserid,
+                        "status" : "D",  //D Delivered, V - viewed
                         'appleDevicesLogs': '',
                         'AndroidDevicesLogs': ''
                     };
@@ -2259,6 +2260,79 @@ exports.updateDeviceToChannel = function(req, res, next) {
         } catch (e) {
             console.log(e)
         }
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+exports.getUserNotifications = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.externaluserid) {
+        var tenant = req.body.tenant;
+        var userid = req.body.externaluserid;
+        dbUtil.getConnection(function(db) {
+            var tableName = "T_" + tenant + "_PUSHLOGS";
+            db.collection(tableName).find({"userid" : userid}).toArray(function(err, result) {
+                console.log(result);
+                if (result.length > 0) {
+                    res.json(result);
+                } else {
+                    res.json({
+                        "error": "No logs found."
+                    });
+                }
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+exports.updateUserNotificationStatus = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body._id) {
+        var tenant = req.body.tenant;
+        dbUtil.getConnection(function(db) {
+            var tableName = "T_" + tenant + "_PUSHLOGS";
+            if (!(req.body._id.match(/^[0-9a-fA-F]{24}$/))) {
+              res.status(401).json({"Error":"Invalid Object Id "+id});
+            }
+            var id = new ObjectId(req.body._id);
+            delete req.body._id;
+            db.collection(tableName).updateOne({
+                "_id": id
+            }, {
+                $set: {
+                    'status': "V"
+                }
+            }, function(err, result3) {
+                res.json({
+                    "success": "data updated successfully"
+                });
+            });
+        });
+    } else {
+        res.status(401).json({
+            "Error": "Parameters missing"
+        });
+    }
+}
+
+exports.getUserNotificationsUnreadCount = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.externaluserid) {
+        var tenant = req.body.tenant;
+        var userid = req.body.externaluserid;
+        dbUtil.getConnection(function(db) {
+            var tableName = "T_" + tenant + "_PUSHLOGS";
+            db.collection(tableName).count({"userid" : userid, "status" : {$ne : "V"} }, function(err, result) {
+                console.log(result);
+                res.json({
+                    "count": result
+                });
+            });
+        });
     } else {
         res.status(401).json({
             "Error": "Parameters missing"
