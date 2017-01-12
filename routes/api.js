@@ -36,6 +36,17 @@ var canProcessMetaDataPost = function (req, res, next) {
 
 var pushPluginController = require("../routes/controller/pushController");
 var generalPushController = require("../routes/controller/generalPushController");
+var attendanceController = require("../routes/controller/attendanceController");
+
+
+router.route("/user/getClassDetail")
+    .post(attendanceController.getClassDetail);
+router.route("/user/markUserAttendance")
+    .post(attendanceController.markUserAttendance);
+router.route("/user/createExcel")
+    .post(attendanceController.createExcel);
+
+    
 
 router.route("/push/addTenantPushKeys")
     .post(pushPluginController.addTenantPushKeys);
