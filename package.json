@@ -22,7 +22,9 @@
     "util" : "~0.10.3",
     "querystring" : "~0.2.0",
     "node-gcm" : "~0.14.4",
-    "apn":"~2.1.0"
+    "apn":"~2.1.0",
+    "msexcel-builder":"~0.0.2",
+    "jsonfile":"~2.4.0"
   },
   "description": "External Dynamic Data Save",
   "main": "bin/www",
