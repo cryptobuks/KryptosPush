@@ -1765,6 +1765,7 @@ exports.postComment = function(req, res, next) {
                                                     } else {
                                                         deviceAndroid.push(result[i].ID);
                                                     }
+
                                                 }
                                                 /*checking redundant ID from diff channels*/
                                                 var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
