@@ -1645,7 +1645,7 @@ exports.postComment = function(req, res, next) {
                                                                     "error": "tenant not found"
                                                                 });
                                                             } else {
-                                                                var apiKey = result[0].gcmKey
+                                                                var apiKey = result[0].gcmKey;
                                                                 var service = new gcm.Sender(apiKey);
                                                                 var message = new gcm.Message();
                                                                 message.addData('title', username + " posted a comment.");
@@ -2182,9 +2182,9 @@ var sendToAndroidDevices = function(title, body, tenant, AndroidPushDevices, ten
 var sendToIOSDevices = function(title, body, tenant, iOSPushDevices, pushData) {
       var options = {};
       options.token = {
-          key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
-          keyId: "G8VD8LMAWQ",
-          teamId: "4CL3P3CWEQ",
+          key: "./HostosAPNKey/APNsAuthKey_57ES993F74.p8",
+          keyId: "57ES993F74",
+          teamId: "99XMLGA57M"
       }
       options["production"] = true;
 
