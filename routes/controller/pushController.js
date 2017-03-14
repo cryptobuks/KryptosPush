@@ -6,8 +6,7 @@ var fs = require("fs");
 
 var dbUtil = require("../../config/dbUtil");
 var ObjectId = require('mongodb').ObjectID;
-
-
+var pushConfig = require('../../config/pushConfig');
 exports.addTenantPushKeys = function(req, res, next) {
     if (req.body && req.body.tenant && req.body.bundleId && req.body.gcmKey) {
 
@@ -656,11 +655,12 @@ exports.sendPushToChannel = function(req, res, next) {
 
                                                     if (iOSPushDevices.length > 0) {
                                                         var options = {};
-                                                        options.token = {
+                                                        /*options.token = {
                                                             key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
                                                             keyId: "G8VD8LMAWQ",
                                                             teamId: "4CL3P3CWEQ",
-                                                        }
+                                                        }*/
+                                                        options.token = pushConfig.getPushConfig(tenant);
                                                         options["production"] = true;
 
                                                         let apnProvider = new apn.Provider(options);
@@ -1687,11 +1687,12 @@ exports.postComment = function(req, res, next) {
 
                                                 if (iOSPushDevices.length > 0) {
                                                     var options = {};
-                                                    options.token = {
+                                                    /*options.token = {
                                                         key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
                                                         keyId: "G8VD8LMAWQ",
                                                         teamId: "4CL3P3CWEQ",
-                                                    }
+                                                    }*/
+                                                    options.token = pushConfig.getPushConfig(tenant);
                                                     options["production"] = true;
 
                                                     let apnProvider = new apn.Provider(options);
@@ -1875,11 +1876,12 @@ exports.postComment = function(req, res, next) {
 
                                                 if (iOSPushDevices.length > 0) {
                                                     var options = {};
-                                                    options.token = {
+                                                    /*options.token = {
                                                         key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
                                                         keyId: "G8VD8LMAWQ",
                                                         teamId: "4CL3P3CWEQ",
-                                                    }
+                                                    }*/
+                                                    options.token = pushConfig.getPushConfig(tenant);
                                                     options["production"] = true;
 
                                                     let apnProvider = new apn.Provider(options);
@@ -2182,11 +2184,12 @@ var sendToAndroidDevices = function(title, body, tenant, AndroidPushDevices, ten
 
 var sendToIOSDevices = function(title, body, tenant, iOSPushDevices, pushData) {
       var options = {};
-      options.token = {
+      /*options.token = {
           key: "./HostosAPNKey/APNsAuthKey_57ES993F74.p8",
           keyId: "57ES993F74",
           teamId: "99XMLGA57M"
-      }
+      }*/
+      options.token = pushConfig.getPushConfig(tenant);
       options["production"] = true;
 
       let apnProvider = new apn.Provider(options);

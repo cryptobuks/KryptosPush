@@ -10,7 +10,7 @@ var ipfilter = require('express-ipfilter');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
-
+var pushConfig = require('./config/pushConfig');
 
 var app = express();
 // view engine setup
@@ -29,6 +29,7 @@ app.use("/kryptosds",express.static(path.join(__dirname, 'public')));
 app.use(cors());
 
 var ips = ['127.0.0.1', '10.2.5.18'];
+
 
 // Allow only whitelisted ips.
 //
