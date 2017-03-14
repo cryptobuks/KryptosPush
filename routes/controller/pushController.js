@@ -6,7 +6,7 @@ var fs = require("fs");
 
 var dbUtil = require("../../config/dbUtil");
 var ObjectId = require('mongodb').ObjectID;
-var pushConfig = require('../../config/pushConfig');
+var pushConfig = require('../../config/pushconfig');
 exports.addTenantPushKeys = function(req, res, next) {
     if (req.body && req.body.tenant && req.body.bundleId && req.body.gcmKey) {
 

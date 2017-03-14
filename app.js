@@ -10,7 +10,7 @@ var ipfilter = require('express-ipfilter');
 
 var routes = require('./routes/index');
 var users = require('./routes/users');
-var pushConfig = require('./config/pushConfig');
+var pushConfig = require('./config/pushconfig');
 
 var app = express();
 // view engine setup
