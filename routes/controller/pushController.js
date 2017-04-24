@@ -46,7 +46,7 @@ exports.addTenantPushKeys = function(req, res, next) {
                 });
             });
         } catch (e) {
-            console.log(e)
+            //console.log(e)
         }
     } else {
         res.status(401).json({
@@ -68,7 +68,7 @@ exports.updateTenantPushKeys = function(req, res, next) {
                 db.collection(tableName).find({
                     "tenant": tenant
                 }).toArray(function(err, result) {
-                    console.log(result);
+                    //console.log(result);
                     if (result.length == 0) {
                         res.json({
                             "error": "tenant not found"
@@ -116,7 +116,7 @@ exports.getTenantPushKeys = function(req, res, next) {
                 db.collection(tableName).find({
                     "tenant": tenant
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length == 0) {
                         res.json({
                             "error": "tenant not found"
@@ -153,7 +153,7 @@ exports.adddevice = function(req, res, next) {
                 db.collection(tableName).find({
                     "ID": ID
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
                         res.json({
                             "error": "Device already registered."
@@ -202,7 +202,7 @@ exports.adddeviceToChannel = function(req, res, next) {
                 db.collection(tableName).find({
                     "ID": ID
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
                         res.json({
                             "error": "Device already registered."
@@ -251,7 +251,7 @@ exports.updateDevice = function(req, res, next) {
                 db.collection(tableName).find({
                     "ID": ID
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
                         var data = {
                             'ID': ID,
@@ -308,7 +308,7 @@ exports.getAllDevices = function(req, res, next) {
                 db.collection(tableName).find({
                     "ID": ID
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
                         res.json(result);
                     } else {
@@ -379,7 +379,7 @@ exports.getChannelDevicesCount = function(req, res, next) {
 
 
 var pushLogEntry = function(tenant, data) {
-    console.log(data);
+   // console.log(data);
     dbUtil.getConnection(function(db) {
         var tableName = "T_" + tenant + "_PUSHLOGS";
         db.collection(tableName).updateOne({
@@ -403,7 +403,7 @@ var sendGroupAndroidPushes = function(AllDevices, message, pushData, tenant) {
         db.collection(tableName).find({
             "tenant": tenant
         }).toArray(function(err, result) {
-            console.log(result);
+           // console.log(result);
             if (result.length == 0) {
                 res.json({
                     "error": "tenant not found"
@@ -429,9 +429,9 @@ var sendGroupAndroidPushes = function(AllDevices, message, pushData, tenant) {
                         } else {
                             pushData.AndroidDevicesLogs = AndroidGrouplogs;
                             pushLogEntry(tenant, pushData);
-                            sendRes.json({
+                            /*sendRes.json({
                                 "success": "Notification sent"
-                            });
+                            });*/
                         }
                     }
                 });
@@ -501,7 +501,7 @@ exports.sendPushToChannel = function(req, res, next) {
 
 
                             db.collection(tableName).insertOne(data, function(err, result3) {
-                                console.log(data);
+                               // console.log(data);
                                 var pushData = data;
                                 var ChannelDevices = [];
                                 var chlen = 0;
@@ -509,7 +509,7 @@ exports.sendPushToChannel = function(req, res, next) {
                                 var getDevices = function() {
                                     dbUtil.getConnection(function(db) {
                                         var tableName = "T_" + tenant + "_" + channel[chlen] + "_DEVICES";
-                                        console.log(tableName);
+                                      //  console.log(tableName);
 
                                         if (deviceType == "all" || deviceType == undefined || deviceType == null) {
                                             var filterQuery = {}
@@ -522,7 +522,7 @@ exports.sendPushToChannel = function(req, res, next) {
                                                 "type": "iOS"
                                             }
                                         }
-                                        console.log(filterQuery);
+                                       // console.log(filterQuery);
                                         db.collection(tableName).find(filterQuery, {
                                             _id: 0
                                         }).toArray(function(err, result) {
@@ -550,8 +550,8 @@ exports.sendPushToChannel = function(req, res, next) {
                                                         return index == self.indexOf(elem);
                                                     });
 
-                                                    console.log("iOS devices" + iOSPushDevices);
-                                                    console.log("Android devices" + AndroidPushDevices);
+                                                   // console.log("iOS devices" + iOSPushDevices);
+                                                   // console.log("Android devices" + AndroidPushDevices);
 
                                                     /* Send pushes to Android device */
 
@@ -601,7 +601,7 @@ exports.sendPushToChannel = function(req, res, next) {
                                                             db.collection(tableName).find({
                                                                 "tenant": tenant
                                                             }).toArray(function(err, result) {
-                                                                console.log(result);
+                                                               // console.log(result);
                                                                 if (result.length == 0) {
                                                                     res.json({
                                                                         "error": "tenant not found"
@@ -630,7 +630,7 @@ exports.sendPushToChannel = function(req, res, next) {
                                                                         { icon: "snooze", title: "SNOOZE", callback: "app.snooze"},
                                                                     ]);*/
 
-                                                                    console.log(apiKey);
+                                                                   // console.log(apiKey);
 
                                                                     service.send(message, {
                                                                         registrationTokens: AndroidPushDevices
@@ -639,9 +639,9 @@ exports.sendPushToChannel = function(req, res, next) {
                                                                             console.error(err + " " + response);
                                                                         } else { //console.log(response);
                                                                             pushData.AndroidDevicesLogs = response;
-                                                                            res.json({
+                                                                            /*res.json({
                                                                                 "success": "Notification sent"
-                                                                            });
+                                                                            });*/
                                                                             pushLogEntry(tenant, pushData);
                                                                         }
                                                                     });
@@ -674,7 +674,7 @@ exports.sendPushToChannel = function(req, res, next) {
                                                             db.collection(tableName).find({
                                                                 "tenant": tenant
                                                             }).toArray(function(err, result) {
-                                                                console.log(result);
+                                                               // console.log(result);
                                                                 if (result.length == 0) {
                                                                     res.json({
                                                                         "error": "tenant not found"
@@ -682,17 +682,20 @@ exports.sendPushToChannel = function(req, res, next) {
                                                                 } else {
                                                                     notification.topic = result[0].bundleId;
                                                                     apnProvider.send(notification, iOSPushDevices).then((result) => {
-                                                                        res.json({
+                                                                        /*res.json({
                                                                             "success": "Notification sent"
-                                                                        });
+                                                                        });*/
                                                                     });
                                                                 }
                                                             });
                                                         });
-                                                        console.log("Ios Push");
+                                                      //  console.log("Ios Push");
 
                                                     }
                                                 }
+                                                res.json({
+                                                    "success": "Notification sent"
+                                                })
                                             } else {
                                                 res.json({
                                                     "error": "No registered devices found."
@@ -747,7 +750,7 @@ exports.sendPushToDevice = function(req, res, next) {
                 db.collection(tableName).find({
                     "ID": id
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
 
                         //console.log("iOS"+ deviceIOS);console.log("Android"+ deviceAndroid);
@@ -769,7 +772,7 @@ exports.sendPushToDevice = function(req, res, next) {
                                 if (err) {
                                     console.error(err);
                                 } else {
-                                    console.log(response);
+                                  //  console.log(response);
                                     /*res.json({
                                         "success": "Notification sent"
                                     });*/
@@ -785,7 +788,7 @@ exports.sendPushToDevice = function(req, res, next) {
                                 db.collection(tableName).find({
                                     "tenant": tenant
                                 }).toArray(function(err, result) {
-                                    console.log(result);
+                                  //  console.log(result);
                                     if (result.length == 0) {
                                         res.json({
                                             "error": "tenant not found"
@@ -826,7 +829,7 @@ exports.sendPushToDevice = function(req, res, next) {
                             var feedback = new apn.Feedback(options);
                             feedback.on("feedback", function(devices) {
                                 devices.forEach(function(item) {
-                                    console.log(item.device + "   " + item.time);
+                                  //  console.log(item.device + "   " + item.time);
                                 });
                             });
                         }
@@ -854,7 +857,7 @@ exports.getPushLogs = function(req, res, next) {
         dbUtil.getConnection(function(db) {
             var tableName = "T_" + tenant + "_PUSHLOGS";
             db.collection(tableName).find({}).toArray(function(err, result) {
-                console.log(result);
+               // console.log(result);
                 if (result.length > 0) {
                     res.json(result);
                 } else {
@@ -956,7 +959,7 @@ exports.deleteDeviceFromChannel = function(req, res, next) {
                 db.collection(tableName).find({
                     "ID": ID
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
                         db.collection(tableName).deleteOne({
                             "ID": ID
@@ -993,7 +996,7 @@ exports.createChannel = function(req, res, next) {
                 db.collection(tableName).find({
                     "channelId": channelId
                 }).toArray(function(err, result) {
-                    console.log(result);
+                  //  console.log(result);
                     if (result.length > 0) {
                         res.json({
                             "error": "Channel already added"
@@ -1030,7 +1033,7 @@ exports.getChannels = function(req, res, next) {
             db.collection(tableName).find().sort({
                 _id: -1
             }).toArray(function(err, result) {
-                console.log(result);
+               // console.log(result);
                 if (result.length > 0) {
                     res.json(result);
                 } else {
@@ -1061,7 +1064,7 @@ exports.likePost = function(req, res, next) {
             db.collection(tableName).find({
                 "postId": postId
             }).toArray(function(err, result) {
-                console.log(result);
+               // console.log(result);
                 var likes = result[0].likes;
                 if (likes == '') {
                     likes = 1;
@@ -1105,7 +1108,7 @@ exports.likePost = function(req, res, next) {
                                     db.collection(tableName).find({
                                         "email": useremail
                                     }).toArray(function(err, result) {
-                                        console.log(result);
+                                      //  console.log(result);
                                         if (result.length > 0) {
                                             var posts = result[0].posts;
                                             posts.push(postId);
@@ -1157,7 +1160,7 @@ exports.likePost = function(req, res, next) {
                                     db.collection(tableName).find({
                                         "email": useremail
                                     }).toArray(function(err, result) {
-                                        console.log(result);
+                                      //  console.log(result);
                                         if (result.length > 0) {
                                             var posts = result[0].posts;
                                             posts.push(postId);
@@ -1217,7 +1220,7 @@ exports.deleteLikePost = function(req, res, next) {
             db.collection(tableName).find({
                 "postId": postId
             }).toArray(function(err, result) {
-                console.log(result);
+               // console.log(result);
                 var likes = result[0].likes;
                 if (likes == '') {} else {
                     likes = likes - 1;
@@ -1264,7 +1267,7 @@ exports.deleteLikePost = function(req, res, next) {
                                 db.collection(tableName).find({
                                     "email": useremail
                                 }).toArray(function(err, result) {
-                                    console.log(result);
+                                  //  console.log(result);
                                     if (result.length > 0) {
                                         var data = result[0];
                                         for (var i = 0; i < data.posts.length; i++) {
@@ -1316,7 +1319,7 @@ exports.getPostLikes = function(req, res, next) {
             }).sort({
                 _id: -1
             }).toArray(function(err, result) {
-                console.log(result);
+               // console.log(result);
                 if (result.length > 0) {
                     res.json(result);
                 } else {
@@ -1344,7 +1347,7 @@ exports.userLikedPost = function(req, res, next) {
                 db.collection(tableName).find({
                     "email": email
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
                         var data = result[0];
                         data.posts.push(postId);
@@ -1394,7 +1397,7 @@ exports.userUnLikePost = function(req, res, next) {
                 db.collection(tableName).find({
                     "email": email
                 }).toArray(function(err, result) {
-                    console.log(result);
+                   // console.log(result);
                     if (result.length > 0) {
                         var data = result[0];
                         for (var i = 0; i < data.posts.length; i++) {
@@ -1434,7 +1437,7 @@ exports.getUserLikedPosts = function(req, res, next) {
             db.collection(tableName).find({
                 'email': email
             }).toArray(function(err, result) {
-                console.log(result);
+               // console.log(result);
                 if (result.length > 0) {
                     res.json(result);
                 } else {
@@ -1471,7 +1474,7 @@ exports.postViews = function(req, res, next) {
                     } else {
                         views = views + 1;
                     }
-                    console.log(views);
+                   // console.log(views);
                     db.collection(tableName).updateOne({
                         "postId": postId
                     }, {
