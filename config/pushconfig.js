@@ -13,7 +13,15 @@ module.exports.getPushConfig = function(tenantid) {
           keyId: "P56AJ4356Q",
           teamId: "GLW9XZQZ5L"
         };
-  }else {
+  }
+  else if(tenantid == 'SWTCC') {
+    return {
+          key: "./SWTCCAPNKey/APNsAuthKey_S6WH9R7SAN.p8",
+          keyId: "S6WH9R7SAN",
+          teamId: "7WGT8EDNZ7"
+        };
+  }
+  else {
 		return {
 			key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
             keyId: "G8VD8LMAWQ",
