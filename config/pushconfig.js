@@ -21,6 +21,14 @@ module.exports.getPushConfig = function(tenantid) {
           teamId: "7WGT8EDNZ7"
         };
   }
+
+  else if(tenantid == 'Becker') {
+    return {
+          key: "./BeckerAPNKey/APNsAuthKey_T8LTJ6DKL3.p8",
+          keyId: "T8LTJ6DKL3",
+          teamId: "8ZY6ZVBR99"
+        };
+  }
   else {
 		return {
 			key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
