@@ -29,6 +29,13 @@ module.exports.getPushConfig = function(tenantid) {
           teamId: "8ZY6ZVBR99"
         };
   }
+  else if(tenantid == 'KBCC') {
+    return {
+          key: "./KBCCAPNKey/APNsAuthKey_3KR3B3U94S.p8",
+          keyId: "3KR3B3U94S",
+          teamId: "ST67VWJNP5"
+        };
+  }
   else {
 		return {
 			key: "./APNKey/APNSAuthKey_G8VD8LMAWQ.p8",
