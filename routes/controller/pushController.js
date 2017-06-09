@@ -2346,3 +2346,100 @@ exports.getUserNotificationsUnreadCount = function(req, res, next) {
         });
     }
 }
+
+
+exports.sendBulkPushToUsers = function(req, res, next) {
+    if (req.body && req.body.tenant && req.body.title && req.body.message && req.body.externaluserids) {
+        var tenant = req.body.tenant;
+        var title = req.body.title;
+        var body = req.body.message;
+        var externaluserid = req.body.externaluserids;
+        var deviceIOS = [];
+        var deviceAndroid = [];
+        var picture = null;
+        var appletName = null;
+
+        dbUtil.getConnection(function(db) {
+            var tableName = "T_" + tenant + "_all_DEVICES";
+            console.log(tableName);
+            var filterQuery = {"others.userid" : {$in : externaluserid }};
+            console.log(filterQuery);
+            db.collection(tableName).find(filterQuery, {
+                _id: 0
+            }).toArray(function(err, result) {
+
+                if (result.length > 0) {
+                    if(true) {
+                        res.json(result);
+                        return;
+                    }
+                    //console.log(result);
+                    for (var i = 0; i < result.length; i++) {
+                        if (result[i].type == "iOS") {
+                            deviceIOS.push(result[i].ID);
+                        } else {
+                            deviceAndroid.push(result[i].ID);
+                        }
+                    }
+                    /*checking redundant ID from diff channels*/
+                    var iOSPushDevices = deviceIOS.filter(function(elem, index, self) {
+                        return index == self.indexOf(elem);
+                    });
+                    var AndroidPushDevices = deviceAndroid.filter(function(elem, index, self) {
+                        return index == self.indexOf(elem);
+                    });
+
+                    console.log("iOS devices" + iOSPushDevices);
+                    console.log("Android devices" + AndroidPushDevices);
+
+                    var tableName = "T_" + tenant + "_PUSHLOGS";
+                    var data = {
+                        'title': title,
+                        'channel': null,
+                        'body': body,
+                        "userid" : externaluserid,
+                        "status" : "D",  //D Delivered, V - viewed
+                        'appleDevicesLogs': '',
+                        'AndroidDevicesLogs': ''
+                    };
+                    db.collection(tableName).insertOne(data, function(err, result3) {
+                        console.log(data);
+                        var pushData = data;
+                        var tableName = "T_PUSH_TENANTKEYS";
+                        db.collection(tableName).find({
+                            "tenant": tenant
+                        }).toArray(function(err, tenantkeysresult) {
+                            console.log(result);
+                            if (tenantkeysresult.length == 0) {
+                                res.json({
+                                    "error": "tenant not found"
+                                });
+                            } else {
+
+                                if(AndroidPushDevices.length > 0) {
+                                  sendToAndroidDevices(title, body, tenant, AndroidPushDevices, tenantkeysresult[0], pushData);
+                                }
+
+                                if (iOSPushDevices.length > 0) {
+                                    sendToIOSDevices(title, body, tenant, iOSPushDevices, tenantkeysresult[0], pushData);
+                                }
+
+                                res.json({
+                                     "success": "Notification sent",
+                                     "devices" : result
+                                 });
+                            }
+                        });
+                    });
+                } else {
+                    res.json({
+                        "error": "No registered devices found."
+                    });
+                }
+            });
+        });
+
+    }else {
+        res.status(401).json({"Error":"Body should contain 'tenant', 'title', 'message' and 'externaluserids' "});
+    }
+}

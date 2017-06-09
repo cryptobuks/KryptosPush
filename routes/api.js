@@ -154,6 +154,10 @@ router.route("/push/updateUserNotificationStatus")
 router.route("/push/getUserNotificationsUnreadCount")
         .post(pushPluginController.getUserNotificationsUnreadCount);
 
+router.route("/push/sendBulkPushToUsers")
+        .post(pushPluginController.sendBulkPushToUsers);
+
+
 
 
 
