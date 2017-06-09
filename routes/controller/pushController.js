@@ -2369,10 +2369,6 @@ exports.sendBulkPushToUsers = function(req, res, next) {
             }).toArray(function(err, result) {
 
                 if (result.length > 0) {
-                    if(true) {
-                        res.json(result);
-                        return;
-                    }
                     //console.log(result);
                     for (var i = 0; i < result.length; i++) {
                         if (result[i].type == "iOS") {
@@ -2393,17 +2389,22 @@ exports.sendBulkPushToUsers = function(req, res, next) {
                     console.log("Android devices" + AndroidPushDevices);
 
                     var tableName = "T_" + tenant + "_PUSHLOGS";
-                    var data = {
-                        'title': title,
-                        'channel': null,
-                        'body': body,
-                        "userid" : externaluserid,
-                        "status" : "D",  //D Delivered, V - viewed
-                        'appleDevicesLogs': '',
-                        'AndroidDevicesLogs': ''
-                    };
-                    db.collection(tableName).insertOne(data, function(err, result3) {
-                        console.log(data);
+                    var alldata = [];
+                    var data = {}
+                    for(var ids=0; ids < externaluserid.length; ids++) {
+                        data = {
+                            'title': title,
+                            'channel': null,
+                            'body': body,
+                            "userid" : externaluserid[ids],
+                            "status" : "D",  //D Delivered, V - viewed
+                            'appleDevicesLogs': '',
+                            'AndroidDevicesLogs': ''
+                        };
+                        alldata.push(data);
+                    }
+                    db.collection(tableName).insertMany(alldata, function(err, result3) {
+                        //console.log(data);
                         var pushData = data;
                         var tableName = "T_PUSH_TENANTKEYS";
                         db.collection(tableName).find({
