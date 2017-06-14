@@ -37,7 +37,7 @@ var canProcessMetaDataPost = function (req, res, next) {
 var pushPluginController = require("../routes/controller/pushController");
 var generalPushController = require("../routes/controller/generalPushController");
 var attendanceController = require("../routes/controller/attendanceController");
-
+var ciuForumController = require("../routes/controller/ciuForumController");
 
 router.route("/user/getClassDetail")
     .post(attendanceController.getClassDetail);
@@ -155,6 +155,11 @@ router.route("/push/getUserNotificationsUnreadCount")
         .post(pushPluginController.getUserNotificationsUnreadCount);
 
 router.route("/push/sendBulkPushToUsers")
+        .post(pushPluginController.sendBulkPushToUsers);
+
+
+/******CIU forums ************/
+router.route("/CIU/createForum")
         .post(pushPluginController.sendBulkPushToUsers);
 
 
